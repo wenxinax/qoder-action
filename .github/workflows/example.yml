@@ -1,0 +1,25 @@
+name: 'Qoder Action Example'
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  qoder-interaction:
+    runs-on: ubuntu-latest
+    name: Run Qoder Interactive Action
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Run Qoder Action
+        uses: ./  # 如果Action在当前仓库，使用 ./ ; 如果发布到marketplace，使用 username/repo-name@version
+        with:
+          user-input: 'Hello from GitHub Action!'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Display Result
+        run: |
+          echo "Action completed!"
+          echo "Check the PR comments for the greeting message."
