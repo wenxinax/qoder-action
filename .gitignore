@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+src/dist/
+
+# Go build artifacts
+cli/qoder-cli
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
