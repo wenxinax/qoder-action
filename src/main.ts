@@ -19,6 +19,12 @@ async function main() {
     console.log('🚀 Starting Qoder Action MVP...');
     console.log(`📝 User input: ${userInput}`);
     console.log(`🎯 Event: ${githubContext.event_name}`);
+    console.log(`🔍 Repository info:`, JSON.stringify({
+      repository: githubContext.repository,
+      event_name: githubContext.event_name,
+      actor: githubContext.actor,
+      ref: githubContext.ref
+    }, null, 2));
 
     // 调用Go CLI工具
     const cliPath = path.resolve(process.env.GITHUB_ACTION_PATH || '.', 'cli', 'qoder-cli');
@@ -57,6 +63,12 @@ async function main() {
 
 async function addPRComment(token: string, context: any, cliResponse: CliResponse) {
   try {
+    // 检查是否有必要的上下文信息
+    if (!context.repository || !context.event || !context.event.pull_request) {
+      console.log('❌ Missing repository or PR context, skipping comment');
+      return;
+    }
+
     const octokit = github.getOctokit(token);
     
     const commentBody = `## 🤖 Qoder Action Result
@@ -71,10 +83,17 @@ ${cliResponse.message}
 ---
 _Powered by Qoder Action MVP_ 🚀`;
 
+    // 使用更安全的方式获取仓库信息
+    const owner = context.repository.owner?.login || context.repository.owner_name;
+    const repo = context.repository.name;
+    const issueNumber = context.event.pull_request.number;
+
+    console.log(`📋 Creating comment for ${owner}/${repo}#${issueNumber}`);
+
     await octokit.rest.issues.createComment({
-      owner: context.repository.owner.login,
-      repo: context.repository.name,
-      issue_number: context.event.pull_request.number,
+      owner,
+      repo,
+      issue_number: issueNumber,
       body: commentBody
     });
 
