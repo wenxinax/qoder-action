@@ -11,32 +11,18 @@ interface CliResponse {
 
 async function main() {
   try {
-    // 获取环境变量
     const userInput = process.env.USER_INPUT || '';
     const githubToken = process.env.GITHUB_TOKEN || '';
     const githubContext = JSON.parse(process.env.GITHUB_CONTEXT || '{}');
 
-    console.log('🚀 Starting Qoder Action MVP...');
-    console.log(`📝 User input: ${userInput}`);
-    console.log(`🎯 Event: ${githubContext.event_name}`);
-    console.log(`🔍 Repository info:`, JSON.stringify({
-      repository: githubContext.repository,
-      event_name: githubContext.event_name,
-      actor: githubContext.actor,
-      ref: githubContext.ref
-    }, null, 2));
-
     // 调用Go CLI工具
     const cliPath = path.resolve(process.env.GITHUB_ACTION_PATH || '.', 'cli', 'qoder-cli');
-    console.log(`🔧 Calling CLI tool: ${cliPath}`);
-    
     const cliOutput = execSync(`${cliPath} greet "${userInput}"`, { 
       encoding: 'utf-8',
       cwd: process.cwd()
     });
 
     const cliResponse: CliResponse = JSON.parse(cliOutput.trim());
-    console.log('✅ CLI Response:', cliResponse);
 
     // 如果是PR事件，添加评论
     if (githubContext.event_name === 'pull_request' && githubToken) {
@@ -44,16 +30,11 @@ async function main() {
     }
 
     // 设置输出
-    const result = {
+    core.setOutput('result', JSON.stringify({
       success: true,
       cli_response: cliResponse,
       timestamp: new Date().toISOString()
-    };
-
-    // 为GitHub Actions设置输出
-    core.setOutput('result', JSON.stringify(result));
-    
-    console.log('🎉 Qoder Action completed successfully!');
+    }));
 
   } catch (error) {
     console.error('❌ Error in Qoder Action:', error);
@@ -63,35 +44,11 @@ async function main() {
 
 async function addPRComment(token: string, context: any, cliResponse: CliResponse) {
   try {
-    // 使用 GitHub 环境变量获取仓库信息
-    const githubRepository = process.env.GITHUB_REPOSITORY; // 格式: owner/repo
-    const eventName = process.env.GITHUB_EVENT_NAME;
-    
-    console.log(`📊 GitHub env vars: GITHUB_REPOSITORY=${githubRepository}, GITHUB_EVENT_NAME=${eventName}`);
-    
-    if (eventName !== 'pull_request') {
-      console.log('❌ Not a pull_request event, skipping comment');
-      return;
-    }
-
-    if (!githubRepository) {
-      console.log('❌ GITHUB_REPOSITORY not found, skipping comment');
-      return;
-    }
+    const githubRepository = process.env.GITHUB_REPOSITORY;
+    if (!githubRepository || !context.event?.pull_request) return;
 
     const [owner, repo] = githubRepository.split('/');
-    
-    // 尝试从多个来源获取 PR 号码
-    let prNumber;
-    if (context.event && context.event.pull_request) {
-      prNumber = context.event.pull_request.number;
-    } else if (context.event && context.event.number) {
-      prNumber = context.event.number;
-    } else {
-      console.log('❌ Cannot find PR number, skipping comment');
-      return;
-    }
-
+    const prNumber = context.event.pull_request.number;
     const octokit = github.getOctokit(token);
     
     const commentBody = `## 🤖 Qoder Action Result
@@ -104,9 +61,7 @@ ${cliResponse.message}
 - Timestamp: ${new Date().toISOString()}
 
 ---
-_Powered by Qoder Action MVP_ 🚀`;
-
-    console.log(`📋 Creating comment for ${owner}/${repo}#${prNumber}`);
+_Powered by Qoder Action_ 🚀`;
 
     await octokit.rest.issues.createComment({
       owner,
@@ -114,14 +69,11 @@ _Powered by Qoder Action MVP_ 🚀`;
       issue_number: prNumber,
       body: commentBody
     });
-
-    console.log('💬 Added comment to PR successfully');
   } catch (error) {
-    console.error('Failed to add PR comment:', error);
+    // PR评论失败不应该影响主流程
   }
 }
 
-// 运行主函数
 main().catch(error => {
   console.error('Fatal error:', error);
   process.exit(1);
