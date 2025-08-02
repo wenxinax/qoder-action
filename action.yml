@@ -1,0 +1,59 @@
+name: 'Qoder Interactive Action'
+description: 'Interactive PR/Issue operations with CLI tool and custom business logic'
+author: 'luxwxin'
+
+inputs:
+  user-input:
+    description: 'User input parameter to be processed by CLI tool'
+    required: true
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+    default: ${{ github.token }}
+
+outputs:
+  result:
+    description: 'Result from the business logic execution'
+    value: ${{ steps.business-logic.outputs.result }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Build Go CLI tool
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}/cli
+        go build -o qoder-cli main.go
+        chmod +x qoder-cli
+
+    - name: Install TypeScript dependencies and build
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}/src
+        npm install
+        npm run build
+
+    - name: Run business logic
+      id: business-logic
+      shell: bash
+      env:
+        USER_INPUT: ${{ inputs.user-input }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        cd ${{ github.action_path }}
+        npm run --prefix src start
+
+branding:
+  icon: 'message-circle'
+  color: 'blue'
