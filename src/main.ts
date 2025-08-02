@@ -45,7 +45,7 @@ async function main() {
     };
 
     // 为GitHub Actions设置输出
-    console.log(`::set-output name=result::${JSON.stringify(result)}`);
+    core.setOutput('result', JSON.stringify(result));
     
     console.log('🎉 Qoder Action completed successfully!');
 
@@ -72,7 +72,7 @@ ${cliResponse.message}
 _Powered by Qoder Action MVP_ 🚀`;
 
     await octokit.rest.issues.createComment({
-      owner: context.repository.owner,
+      owner: context.repository.owner.login,
       repo: context.repository.name,
       issue_number: context.event.pull_request.number,
       body: commentBody
