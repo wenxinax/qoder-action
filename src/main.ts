@@ -63,9 +63,32 @@ async function main() {
 
 async function addPRComment(token: string, context: any, cliResponse: CliResponse) {
   try {
-    // 检查是否有必要的上下文信息
-    if (!context.repository || !context.event || !context.event.pull_request) {
-      console.log('❌ Missing repository or PR context, skipping comment');
+    // 使用 GitHub 环境变量获取仓库信息
+    const githubRepository = process.env.GITHUB_REPOSITORY; // 格式: owner/repo
+    const eventName = process.env.GITHUB_EVENT_NAME;
+    
+    console.log(`📊 GitHub env vars: GITHUB_REPOSITORY=${githubRepository}, GITHUB_EVENT_NAME=${eventName}`);
+    
+    if (eventName !== 'pull_request') {
+      console.log('❌ Not a pull_request event, skipping comment');
+      return;
+    }
+
+    if (!githubRepository) {
+      console.log('❌ GITHUB_REPOSITORY not found, skipping comment');
+      return;
+    }
+
+    const [owner, repo] = githubRepository.split('/');
+    
+    // 尝试从多个来源获取 PR 号码
+    let prNumber;
+    if (context.event && context.event.pull_request) {
+      prNumber = context.event.pull_request.number;
+    } else if (context.event && context.event.number) {
+      prNumber = context.event.number;
+    } else {
+      console.log('❌ Cannot find PR number, skipping comment');
       return;
     }
 
@@ -83,17 +106,12 @@ ${cliResponse.message}
 ---
 _Powered by Qoder Action MVP_ 🚀`;
 
-    // 使用更安全的方式获取仓库信息
-    const owner = context.repository.owner?.login || context.repository.owner_name;
-    const repo = context.repository.name;
-    const issueNumber = context.event.pull_request.number;
-
-    console.log(`📋 Creating comment for ${owner}/${repo}#${issueNumber}`);
+    console.log(`📋 Creating comment for ${owner}/${repo}#${prNumber}`);
 
     await octokit.rest.issues.createComment({
       owner,
       repo,
-      issue_number: issueNumber,
+      issue_number: prNumber,
       body: commentBody
     });
 
