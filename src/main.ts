@@ -21,7 +21,7 @@ async function main() {
     console.log(`🎯 Event: ${githubContext.event_name}`);
 
     // 调用Go CLI工具
-    const cliPath = path.resolve(__dirname, '..', '..', 'cli', 'qoder-cli');
+    const cliPath = path.resolve(process.env.GITHUB_ACTION_PATH || '.', 'cli', 'qoder-cli');
     console.log(`🔧 Calling CLI tool: ${cliPath}`);
     
     const cliOutput = execSync(`${cliPath} greet "${userInput}"`, { 

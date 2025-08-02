@@ -36,11 +36,12 @@ runs:
         go build -o qoder-cli main.go
         chmod +x qoder-cli
 
-    - name: Install TypeScript dependencies
+    - name: Install TypeScript dependencies and build
       shell: bash
       run: |
         cd ${{ github.action_path }}/src
         npm install
+        npm run build
 
     - name: Run business logic
       id: business-logic
