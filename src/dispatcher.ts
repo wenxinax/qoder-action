@@ -1,5 +1,6 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
+import * as fs from 'fs';   
 
 async function run(): Promise<void> {
   try {
@@ -63,6 +64,9 @@ async function run(): Promise<void> {
       - Author: @${pr.user.login}
       - Body: ${pr.body}
       - Diff:\n      \`\`\`diff\n      ${diff}\n      \`\`\`\n    `;
+
+    fs.writeFileSync('./prompt.txt', finalPrompt);
+    core.info(`Prompt ${finalPrompt} written to prompt.txt`);
 
     core.setOutput('should_run', "true");
     core.setOutput('prompt', finalPrompt);

@@ -29963,6 +29963,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(6307));
 const github = __importStar(__nccwpck_require__(1967));
+const fs = __importStar(__nccwpck_require__(9896));
 async function run() {
     try {
         const triggerOn = core.getInput('trigger_on', { required: true });
@@ -30013,6 +30014,8 @@ async function run() {
       - Author: @${pr.user.login}
       - Body: ${pr.body}
       - Diff:\n      \`\`\`diff\n      ${diff}\n      \`\`\`\n    `;
+        fs.writeFileSync('./prompt.txt', finalPrompt);
+        core.info(`Prompt ${finalPrompt} written to prompt.txt`);
         core.setOutput('should_run', "true");
         core.setOutput('prompt', finalPrompt);
     }
