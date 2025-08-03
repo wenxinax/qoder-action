@@ -66,7 +66,7 @@ async function run(): Promise<void> {
       - Diff:\n      \`\`\`diff\n      ${diff}\n      \`\`\`\n    `;
 
     fs.writeFileSync('./prompt.txt', finalPrompt);
-    core.info(`Prompt ${finalPrompt} written to prompt.txt`);
+    core.info(`Prompt (first 200 chars): ${finalPrompt.substring(0, 200)}...`);
 
     core.setOutput('should_run', "true");
     core.setOutput('prompt', finalPrompt);
