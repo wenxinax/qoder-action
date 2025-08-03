@@ -1,0 +1,28 @@
+{
+  "name": "qoder-action",
+  "version": "1.0.0",
+  "description": "A GitHub Action that demonstrates interactive PR/Issue operations.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wenxinax/qoder-action.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wenxinax/qoder-action/issues"
+  },
+  "homepage": "https://github.com/wenxinax/qoder-action#readme",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "prettier": "^3.6.2"
+  }
+}
