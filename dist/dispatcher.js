@@ -29965,15 +29965,15 @@ const core = __importStar(__nccwpck_require__(6307));
 const github = __importStar(__nccwpck_require__(1967));
 async function run() {
     try {
-        const triggerOn = process.env.TRIGGER_ON;
+        const triggerOn = core.getInput('trigger_on', { required: true });
         core.info(`Triggering on: ${triggerOn}`);
-        if (triggerOn !== "event") {
-            core.info(`Skipping Qoder action execution because trigger_on is not 'event'.`);
-            core.setOutput("should_run", "false");
+        const userPrompt = core.getInput('prompt');
+        // Manually check for required prompt based on trigger
+        if (triggerOn === 'event' && !userPrompt) {
+            core.setFailed('The "prompt" input is required when "trigger_on" is "event".');
             return;
         }
-        const userPrompt = core.getInput('prompt', { required: true });
-        const githubToken = process.env.GITHUB_TOKEN;
+        const githubToken = core.getInput('github_token', { required: true });
         if (!githubToken) {
             throw new Error("GITHUB_TOKEN is required but not provided.");
         }
