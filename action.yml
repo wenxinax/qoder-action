@@ -64,7 +64,7 @@ runs:
       uses: ./qoder-core-action
       with:
         qoder_token: ${{ inputs.qoder_token }}
-        prompt: ${{ steps.handler.outputs.prompt_content }}
+        prompt: ${{ steps.handler.outputs.prompt }}
 
     - name: "Finalize GitHub Operations"
       if: always() && steps.handler.outputs.should_run == 'true'

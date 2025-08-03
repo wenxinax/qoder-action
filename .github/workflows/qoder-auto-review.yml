@@ -1,0 +1,18 @@
+name: "Qoder Auto Review"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  auto-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Run Qoder Auto Review"
+        uses: ./ # In a real scenario, this would be your-org/qoder-action@v1
+        with:
+          trigger_on: "event"
+          prompt: |
+            Please perform a thorough code review of this pull request.
+            Focus on code quality, potential bugs, and adherence to our style guide.
+            Provide actionable feedback.
