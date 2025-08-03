@@ -5,12 +5,12 @@ async function run(): Promise<void> {
   try {
     const triggerOn = core.getInput('trigger_on', { required: true });
     core.info(`Triggering on: ${triggerOn}`);
-    let userPrompt = '';
-    if (triggerOn === 'event') {
-      userPrompt = core.getInput('prompt', { required: true });
-    } else {
-      // Potentially handle 'mention' or other triggers here in the future
-      userPrompt = core.getInput('prompt'); 
+    const userPrompt = core.getInput('prompt');
+
+    // Manually check for required prompt based on trigger
+    if (triggerOn === 'event' && !userPrompt) {
+      core.setFailed('The "prompt" input is required when "trigger_on" is "event".');
+      return;
     }
 
     const githubToken = core.getInput('github_token', { required: true });

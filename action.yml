@@ -49,28 +49,28 @@ runs:
   using: "composite"
   steps:
     - name: "Dispatch Qoder Task"
-      id: handler
+      id: dispatcher
       shell: bash
       run: node ${GITHUB_ACTION_PATH}/dist/dispatcher.js
       env:
-        TRIGGER_ON: ${{ inputs.trigger_on }}
-        MENTION_PHRASE: ${{ inputs.mention_phrase }}
-        PROMPT: ${{ inputs.prompt }}
-        GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_TRIGGER_ON: ${{ inputs.trigger_on }}
+        INPUT_MENTION_PHRASE: ${{ inputs.mention_phrase }}
+        INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
 
     - name: "Run Qoder"
       id: qoder-run
-      if: steps.handler.outputs.should_run == 'true'
+      if: steps.dispatcher.outputs.should_run == 'true'
       uses: ./qoder-core-action
       with:
         qoder_token: ${{ inputs.qoder_token }}
-        prompt: ${{ steps.handler.outputs.prompt }}
+        prompt: ${{ steps.dispatcher.outputs.prompt }}
 
     - name: "Finalize GitHub Operations"
-      if: always() && steps.handler.outputs.should_run == 'true'
+      if: always() && steps.dispatcher.outputs.should_run == 'true'
       shell: bash
       run: node ${GITHUB_ACTION_PATH}/dist/finalize.js
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
-        COMMENT_ID: ${{ steps.handler.outputs.comment_id }}
+        COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
         RESULT_CONTENT: ${{ steps.qoder-run.outputs.result_content }}
