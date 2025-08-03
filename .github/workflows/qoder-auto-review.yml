@@ -8,6 +8,9 @@ jobs:
   auto-review:
     runs-on: ubuntu-latest
     steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
       - name: "Run Qoder Auto Review"
         uses: ./ # In a real scenario, this would be your-org/qoder-action@v1
         with:
