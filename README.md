@@ -83,6 +83,30 @@ jobs:
 
 为了让此 Action 正常工作，你必须在你的 GitHub 仓库中配置 `DASHSCOPE_API_KEY`。请前往你的仓库页面，在 `Settings` -> `Secrets and variables` -> `Actions` 中创建一个新的 `Repository secret`，名称为 `DASHSCOPE_API_KEY`，并将你的 Dashscope API Key 作为其值。
 
+## 设计理念
+
+本项目采用分层设计，将整体功能拆分为两个独立的 Action：`qoder-action` (主 Action) 和 `qoder-core-action` (核心 Action)，各自承担不同的职责。
+
+- **`qoder-action` (主 Action / 编排层)**
+  - **角色**: 这是一个 `composite` Action，作为用户工作流的直接入口，负责整个流程的编排和调度。
+  - **职责**:
+    - 处理 GitHub 的事件上下文（如 Pull Request 的开启、评论等）。
+    - 负责与用户交互，例如在 PR 中创建和更新评论。
+    - 准备运行核心任务所需的数据（如整合生成 `prompt` 文件），并决定是否触发核心 Action。
+
+- **`qoder-core-action` (核心 Action / 执行层)**
+  - **角色**: 这是一个 `node20` Action，封装了所有与 `qoder-cli` 相关的核心任务。
+  - **职责**:
+    - 设置运行环境，如下载和安装 `ripgrep`、`fzf` 等依赖。
+    - 下载并执行 `qoder-cli`。
+    - 实时捕获和处理 `qoder-cli` 的输出，并将最终的关键结果通过 `outputs` 传递出去。
+
+**这样设计的好处在于：**
+
+- **关注点分离 (Separation of Concerns)**: GitHub 交互逻辑（主 Action）与核心的 CLI 执行逻辑（核心 Action）完全解耦，使得代码结构更清晰。
+- **可维护性 (Maintainability)**: 当出现问题时，可以快速定位。例如，评论格式问题只需修改主 Action，而 CLI 执行失败则只需排查核心 Action。
+- **可重用性 (Reusability)**: `qoder-core-action` 作为一个独立的“引擎”，未来可以被其他不同触发方式或报告形式的 Action 复用。
+
 ## 输入参数
 
 你可以使用以下输入参数来配置此 Action：
