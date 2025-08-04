@@ -61,7 +61,7 @@ runs:
     - name: "Run Qoder"
       id: qoder-run
       if: steps.dispatcher.outputs.should_run == 'true'
-      uses: ./qoder-core-action
+      uses: ${{ github.action_path }}/qoder-core-action
       with:
         prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
