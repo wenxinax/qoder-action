@@ -29999,7 +29999,7 @@ async function run() {
         const footer = `<!-- QODER_FOOTER_START -->
 *You can view the live progress in the [action logs](${checkRunUrl}).*
 <!-- QODER_FOOTER_END -->`;
-        const welcomeMessage = `${header}\n\n---\n\n${body}\n\n---\n\n${footer}`;
+        const welcomeMessage = `${header}\n\n---\n\n${body}\n\n${footer}`;
         const { data: comment } = await octokit.rest.issues.createComment({
             ...context.repo,
             issue_number: pr.number,
