@@ -63,8 +63,9 @@ runs:
       if: steps.dispatcher.outputs.should_run == 'true'
       uses: ./qoder-core-action
       with:
-        qoder_token: ${{ inputs.qoder_token }}
         prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
+        dashscope_api_key: ${{ inputs.dashscope_api_key }}
+        # system_prompt: 'Optional: Add a system prompt here if needed'
 
     - name: "Finalize GitHub Operations"
       if: always() && steps.dispatcher.outputs.should_run == 'true'
