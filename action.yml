@@ -66,6 +66,8 @@ runs:
       id: qoder-run
       if: steps.dispatcher.outputs.should_run == 'true'
       uses: wenxinax/qoder-core-action@main
+      env: 
+        GH_TOKEN: ${{ inputs.github_token }}
       with:
         prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
