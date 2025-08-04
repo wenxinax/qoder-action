@@ -61,7 +61,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: "Run Qoder Auto Review"
-        uses: wenxinax/qoder-action@main
+        uses: wenxinax/qoder-action@dev
         with:
           trigger_on: "event"
           dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
