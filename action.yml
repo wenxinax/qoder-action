@@ -58,6 +58,10 @@ runs:
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
 
+    - name: "Set up Docker Engine"
+      if: steps.dispatcher.outputs.should_run == 'true'
+      uses: docker/setup-docker-action@v4
+
     - name: "Run Qoder"
       id: qoder-run
       if: steps.dispatcher.outputs.should_run == 'true'
@@ -65,6 +69,7 @@ runs:
       with:
         prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
+        config: ${{ steps.dispatcher.outputs.qoder_config_json }}
 
     - name: "Finalize GitHub Operations"
       if: always() && steps.dispatcher.outputs.should_run == 'true'
