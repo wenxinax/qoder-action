@@ -1,59 +1,77 @@
-name: 'Qoder Interactive Action'
-description: 'Interactive PR/Issue operations with CLI tool and custom business logic'
-author: 'luxwxin'
+# qoder-action/action.yml
 
+name: "Qoder Action"
+description: "An intelligent code assistant powered by the Qoder CLI."
+branding:
+  icon: "code"
+  color: "green"
+
+# ==================================
+# INPUTS
+# ==================================
 inputs:
-  user-input:
-    description: 'User input parameter to be processed by CLI tool'
+  trigger_on:
+    description: "Required. Defines the trigger mechanism. Must be one of: 'mention', 'event'."
     required: true
-  github-token:
-    description: 'GitHub token for API access'
+  mention_phrase:
+    description: "The phrase to look for in comments when trigger_on is 'mention'."
+    required: false
+    default: "@qoder"
+
+  prompt:
+    description: "The instruction for Qoder. Required when trigger_on is 'event'."
+    required: false
+
+  ## Authentication & Configuration
+  dashscope_api_key:
+    description: "Required. The authentication token for the Qoder service."
     required: true
+  github_token:
+    description: "The GitHub token for API operations."
+    required: false
     default: ${{ github.token }}
 
-outputs:
-  result:
-    description: 'Result from the business logic execution'
-    value: ${{ steps.business-logic.outputs.result }}
+  ## Execution Control
+  timeout_minutes:
+    description: "Timeout in minutes for the action's execution."
+    required: false
+    default: "60"
 
+# ==================================
+# OUTPUTS
+# ==================================
+
+
+# ==================================
+# EXECUTION STEPS
+# ==================================
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - name: Setup Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-
-    - name: Build Go CLI tool
+    - name: "Dispatch Qoder Task"
+      id: dispatcher
       shell: bash
-      run: |
-        cd ${{ github.action_path }}/cli
-        go build -o qoder-cli main.go
-        chmod +x qoder-cli
-
-    - name: Install TypeScript dependencies and build
-      shell: bash
-      run: |
-        cd ${{ github.action_path }}/src
-        npm install
-        npm run build
-
-    - name: Run business logic
-      id: business-logic
-      shell: bash
+      run: node ${GITHUB_ACTION_PATH}/dist/dispatcher.js
       env:
-        USER_INPUT: ${{ inputs.user-input }}
-        GITHUB_TOKEN: ${{ inputs.github-token }}
-        GITHUB_CONTEXT: ${{ toJson(github) }}
-      run: |
-        cd ${{ github.action_path }}
-        npm run --prefix src start
+        INPUT_TRIGGER_ON: ${{ inputs.trigger_on }}
+        INPUT_MENTION_PHRASE: ${{ inputs.mention_phrase }}
+        INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
 
-branding:
-  icon: 'message-circle'
-  color: 'blue'
+    - name: "Run Qoder"
+      id: qoder-run
+      if: steps.dispatcher.outputs.should_run == 'true'
+      uses: ./qoder-core-action
+      with:
+        prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
+        dashscope_api_key: ${{ inputs.dashscope_api_key }}
+        # system_prompt: 'Optional: Add a system prompt here if needed'
+
+    - name: "Finalize GitHub Operations"
+      if: always() && steps.dispatcher.outputs.should_run == 'true'
+      shell: bash
+      run: node ${GITHUB_ACTION_PATH}/dist/finalize.js
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
+        RESULT_CONTENT: ${{ steps.qoder-run.outputs.result_content }}

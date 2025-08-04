@@ -1,0 +1,23 @@
+name: 'Qoder Core Logic'
+description: 'Downloads and runs the qoder-cli with specified prompts.'
+
+inputs:
+  prompt_file_path:
+    description: 'The path to the file containing the main prompt.'
+    required: true
+  system_prompt:
+    description: 'An optional system prompt to guide the AI.'
+    required: false
+  dashscope_api_key:
+    description: 'The API key for the Dashscope service.'
+    required: true
+
+outputs:
+  result_type:
+    description: 'The result type from the qoder-cli output (e.g., success, error).'
+  result_content:
+    description: 'The main content of the result from the qoder-cli.'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
