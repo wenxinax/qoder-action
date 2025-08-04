@@ -23,7 +23,7 @@ inputs:
     required: false
 
   ## Authentication & Configuration
-  qoder_token:
+  dashscope_api_key:
     description: "Required. The authentication token for the Qoder service."
     required: true
   github_token:
