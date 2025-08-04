@@ -60,6 +60,13 @@ I will update this comment with the results shortly.`;
 
     // Prepare the MCP server config by injecting the real GitHub token
     const githubTokenForMcp = core.getInput('github_token', { required: true });
+    if (githubTokenForMcp) {
+      core.info(`Successfully read github_token. Length: ${githubTokenForMcp.length}`);
+    } else {
+      core.setFailed('Failed to read github_token, it is empty.');
+      return;
+    }
+
     const mcpConfigTemplate = {
       mcpServers: {
         github: {
@@ -78,11 +85,9 @@ I will update this comment with the results shortly.`;
         }
       }
     };
-    // NOTE: This assumes the qoder-cli replaces the placeholder `{github_token}` with an environment variable.
-    // We will ensure this environment variable is set in the core action.
-    // For now, we just pass the template.
-    // A more robust solution might involve replacing the token here if the CLI doesn't support placeholder replacement.
+
     const configJson = JSON.stringify(mcpConfigTemplate, null, 2).replace('{github_token}', githubTokenForMcp);
+    core.info(`Rendered config.json: ${configJson}`);
     core.setOutput('qoder_config_json', configJson);
 
     core.info('Gather PR infomation...');
