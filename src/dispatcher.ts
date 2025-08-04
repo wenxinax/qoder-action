@@ -41,15 +41,13 @@ async function run(): Promise<void> {
     core.info(`Check run URL: ${checkRunUrl}`);
 
     core.info("Creating initial status comment...");
-    const welcomeMessage = `
-      👋 Hello! I'm Qoder, your AI code assistant.
+    const welcomeMessage = `👋 Hello! I'm Qoder, your AI code assistant.
 
-      I'm currently analyzing this pull request. This might take a few moments.
+I'm currently analyzing this pull request. This might take a few moments.
 
-      You can view the progress of the analysis [here](${checkRunUrl}).
+You can view the progress of the analysis [here](${checkRunUrl}).
 
-      I will update this comment with the results shortly.
-    `;
+I will update this comment with the results shortly.`;
 
     const { data: comment } = await octokit.rest.issues.createComment({
       ...context.repo,

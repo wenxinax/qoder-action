@@ -34,19 +34,17 @@ async function run(): Promise<void> {
       `;
     }
 
-    const finalCommentBody = `
-      ✅ **Qoder Analysis Complete**
+    const finalCommentBody = `✅ **Qoder Analysis Complete**
 
-      Here are the results of the analysis:
+Here are the results of the analysis:
 
-      ---
+---
 
-      ${resultContent}
+${resultContent}
 
-      ---
+---
 
-      *You can view the full execution details in the [action logs](${checkRunUrl}).*
-    `;
+*You can view the full execution details in the [action logs](${checkRunUrl}).*`;
 
     core.info("Updating comment with final results...");
     await octokit.rest.issues.updateComment({
