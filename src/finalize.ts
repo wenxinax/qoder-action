@@ -1,21 +1,40 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 
+// Helper function to update a section of the comment
+function updateSection(originalBody: string, section: 'HEADER' | 'BODY' | 'FOOTER', newContent: string): string {
+  const startMarker = `<!-- QODER_${section}_START -->`;
+  const endMarker = `<!-- QODER_${section}_END -->`;
+
+  const startIndex = originalBody.indexOf(startMarker);
+  const endIndex = originalBody.indexOf(endMarker);
+
+  if (startIndex === -1 || endIndex === -1) {
+    core.warning(`Could not find markers for section ${section}. The comment might not be updated as expected.`);
+    // Fallback: append the new content if markers are missing
+    return `${originalBody}\n\n${newContent}`;
+  }
+
+  const before = originalBody.substring(0, startIndex + startMarker.length);
+  const after = originalBody.substring(endIndex);
+
+  return `${before}\n${newContent}\n${after}`;
+}
+
 async function run(): Promise<void> {
   try {
     const githubToken = process.env.GITHUB_TOKEN;
-    const commentId = process.env.COMMENT_ID;
-    let resultContent = process.env.RESULT_CONTENT || "";
+    const commentIdStr = process.env.COMMENT_ID;
     const runId = process.env.RUN_ID;
-    const qoderResultType = process.env.QODER_RESULT_TYPE || 'error'; // Default to error
 
     if (!githubToken) {
       throw new Error("GITHUB_TOKEN is required but not provided.");
     }
-    if (!commentId) {
+    if (!commentIdStr) {
       core.info("No comment ID provided, skipping comment update.");
       return;
     }
+    const commentId = parseInt(commentIdStr, 10);
 
     const octokit = github.getOctokit(githubToken);
     const context = github.context;
@@ -25,41 +44,30 @@ async function run(): Promise<void> {
       throw new Error("Pull request payload is missing.");
     }
 
+    // --- 1. Fetch the existing comment ---
+    core.info(`Fetching existing comment with ID: ${commentId}`);
+    const { data: existingComment } = await octokit.rest.issues.getComment({
+      ...context.repo,
+      comment_id: commentId,
+    });
+
+    let currentBody = existingComment.body || '';
+
+    // --- 2. Define the new content for body and footer ---
+    const finalBodyContent = `✅ Analysis Complete. The AI's feedback has been posted in the pull request thread.`;
     const checkRunUrl = `${pr.html_url}/checks?check_run_id=${runId}`;
-    let finalCommentBody = '';
+    const finalFooterContent = `*You can view the full execution details in the [action logs](${checkRunUrl}).*`;
 
-    if (qoderResultType !== 'success') {
-      core.error(`The qoder-run step did not succeed. Result type: ${qoderResultType}. Reporting a failure comment.`);
-      finalCommentBody = `❌ **Qoder Analysis Failed**
+    // --- 3. Update sections ---
+    currentBody = updateSection(currentBody, 'BODY', finalBodyContent);
+    currentBody = updateSection(currentBody, 'FOOTER', finalFooterContent);
 
-An error occurred during the analysis process.
-
-Please review the [action logs](${checkRunUrl}) for detailed error messages and diagnostics.`;
-    } else {
-      core.info("The qoder-run step succeeded. Reporting a success comment.");
-      if (!resultContent) {
-        core.warning("Result content is empty, but the result type was success.");
-        resultContent = `Analysis completed successfully, but no specific feedback was generated.`;
-      }
-
-      finalCommentBody = `✅ **Qoder Analysis Complete**
-
-Here are the results of the analysis:
-
----
-
-${resultContent}
-
----
-
-*You can view the full execution details in the [action logs](${checkRunUrl}).*`;
-    }
-
-    core.info("Updating comment with final results...");
+    // --- 4. Update the comment on GitHub ---
+    core.info("Updating comment with final status...");
     await octokit.rest.issues.updateComment({
       ...context.repo,
-      comment_id: parseInt(commentId, 10),
-      body: finalCommentBody,
+      comment_id: commentId,
+      body: currentBody,
     });
 
     core.info("Comment updated successfully.");
