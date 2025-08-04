@@ -36,9 +36,20 @@ async function run(): Promise<void> {
     }
     core.debug(`Processing pull request: ${pr.title} (#${pr.number})`);
 
+    const runId = context.runId;
+    const checkRunUrl = `${pr.html_url}/checks?check_run_id=${runId}`;
+    core.info(`Check run URL: ${checkRunUrl}`);
+
     core.info("Creating initial status comment...");
-    const welcomeMessage =
-      "👋 Hello! Qoder is analyzing this pull request. I will update this comment with the results shortly.";
+    const welcomeMessage = `
+      👋 Hello! I'm Qoder, your AI code assistant.
+
+      I'm currently analyzing this pull request. This might take a few moments.
+
+      You can view the progress of the analysis [here](${checkRunUrl}).
+
+      I will update this comment with the results shortly.
+    `;
 
     const { data: comment } = await octokit.rest.issues.createComment({
       ...context.repo,
@@ -47,6 +58,7 @@ async function run(): Promise<void> {
     });
     core.info(`Initial comment created with ID: ${comment.id}`);
     core.setOutput('comment_id', comment.id.toString());
+    core.setOutput('run_id', runId.toString());
 
     core.info('Gather PR infomation...');
     const { data: diff } = await octokit.rest.pulls.get({
