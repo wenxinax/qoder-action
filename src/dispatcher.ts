@@ -44,9 +44,11 @@ async function run(): Promise<void> {
 
     const header = `<!-- QODER_HEADER_START -->\n👋 Hello! I'm Qoder, your AI code assistant.\n<!-- QODER_HEADER_END -->`;
     const body = `<!-- QODER_BODY_START -->\n⏳ I'm currently analyzing this pull request. I will post my findings directly in the PR thread.\n<!-- QODER_BODY_END -->`;
-    const footer = `<!-- QODER_FOOTER_START -->\n*You can view the live progress in the [action logs](${checkRunUrl}).*\n<!-- QODER_FOOTER_END -->`;
+    const footer = `<!-- QODER_FOOTER_START -->
+*You can view the live progress in the [action logs](${checkRunUrl}).*
+<!-- QODER_FOOTER_END -->`;
 
-    const welcomeMessage = `${header}\n\n${body}\n\n${footer}`;
+    const welcomeMessage = `${header}\n\n---\n\n${body}\n\n---\n\n${footer}`;
 
     const { data: comment } = await octokit.rest.issues.createComment({
       ...context.repo,
