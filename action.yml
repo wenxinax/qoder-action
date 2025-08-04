@@ -73,4 +73,6 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
+        RUN_ID: ${{ steps.dispatcher.outputs.run_id }}
         RESULT_CONTENT: ${{ steps.qoder-run.outputs.result_content }}
+        QODER_RESULT_TYPE: ${{ steps.qoder-run.outputs.result_type }}
