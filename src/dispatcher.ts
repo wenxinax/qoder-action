@@ -102,10 +102,11 @@ I will update this comment with the results shortly.`;
     const finalPrompt = `
       ${userPrompt}
       Pull Request Analysis Request:
+      - PR Number: #${pr.number}
+      - Branch: ${pr.head.ref}
       - Title: ${pr.title}
       - Author: @${pr.user.login}
-      - Body: ${pr.body}
-      - Diff:\n      \`\`\`diff\n      ${diff}\n      \`\`\`\n    `;
+      - Body: ${pr.body}`;
 
     fs.writeFileSync('./prompt.txt', finalPrompt);
     core.info(`Prompt (first 200 chars): ${finalPrompt.substring(0, 200)}...`);
