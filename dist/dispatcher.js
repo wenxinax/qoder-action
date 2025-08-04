@@ -30017,7 +30017,7 @@ async function run() {
         fs.writeFileSync('./prompt.txt', finalPrompt);
         core.info(`Prompt (first 200 chars): ${finalPrompt.substring(0, 200)}...`);
         core.setOutput('should_run', "true");
-        core.setOutput('prompt', finalPrompt);
+        core.setOutput('prompt_file_path', './prompt.txt');
     }
     catch (error) {
         if (error instanceof Error) {
