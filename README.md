@@ -42,6 +42,8 @@
 
 ### 工作流示例
 
+请前往你的仓库页面，在 `Settings` -> `Secrets and variables` -> `Actions` 中创建一个新的 `Repository secret`，名称为 `DASHSCOPE_API_KEY`，并将你的 Dashscope API Key 作为其值。
+
 在你的项目中创建 `.github/workflows/qoder-auto-review.yml` 文件，并填入以下内容。这个工作流会在每次有新的 PR 或 PR 更新时自动触发 AI 代码评审。
 
 ```yaml
@@ -81,7 +83,6 @@ jobs:
             请使用中文回答。
 ```
 
-为了让此 Action 正常工作，你必须在你的 GitHub 仓库中配置 `DASHSCOPE_API_KEY`。请前往你的仓库页面，在 `Settings` -> `Secrets and variables` -> `Actions` 中创建一个新的 `Repository secret`，名称为 `DASHSCOPE_API_KEY`，并将你的 Dashscope API Key 作为其值。
 
 ## 设计理念
 
