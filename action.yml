@@ -61,11 +61,10 @@ runs:
     - name: "Run Qoder"
       id: qoder-run
       if: steps.dispatcher.outputs.should_run == 'true'
-      uses: ${{ github.action_path }}/qoder-core-action
+      uses: wenxinax/qoder-core-action@main
       with:
         prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
-        # system_prompt: 'Optional: Add a system prompt here if needed'
 
     - name: "Finalize GitHub Operations"
       if: always() && steps.dispatcher.outputs.should_run == 'true'
