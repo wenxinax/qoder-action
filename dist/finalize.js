@@ -29971,7 +29971,6 @@ function updateSection(originalBody, section, newContent) {
     const endIndex = originalBody.indexOf(endMarker);
     if (startIndex === -1 || endIndex === -1) {
         core.warning(`Could not find markers for section ${section}. The comment might not be updated as expected.`);
-        // Fallback: append the new content if markers are missing
         return `${originalBody}\n\n${newContent}`;
     }
     const before = originalBody.substring(0, startIndex + startMarker.length);
@@ -29983,6 +29982,7 @@ async function run() {
         const githubToken = process.env.GITHUB_TOKEN;
         const commentIdStr = process.env.COMMENT_ID;
         const runId = process.env.RUN_ID;
+        const qoderRunOutcome = process.env.QODER_RUN_OUTCOME || 'success';
         if (!githubToken) {
             throw new Error("GITHUB_TOKEN is required but not provided.");
         }
@@ -30004,15 +30004,18 @@ async function run() {
             comment_id: commentId,
         });
         let currentBody = existingComment.body || '';
-        // --- 2. Define the new content for body and footer ---
-        const finalBodyContent = `✅ Analysis Complete. The AI's feedback has been posted in the pull request thread.`;
         const checkRunUrl = `${pr.html_url}/checks?check_run_id=${runId}`;
-        const finalFooterContent = `*You can view the full execution details in the [action logs](${checkRunUrl}).*`;
-        // --- 3. Update sections ---
-        currentBody = updateSection(currentBody, 'BODY', finalBodyContent);
+        // --- 2. Define the new content for footer ---
+        const finalFooterContent = `*Workflow finished. You can view the full execution details in the [action logs](${checkRunUrl}).*`;
         currentBody = updateSection(currentBody, 'FOOTER', finalFooterContent);
+        // --- 3. If the core step failed, we MUST update the body to reflect that ---
+        if (qoderRunOutcome === 'failure') {
+            core.error("The qoder-run step failed. Overwriting body with failure message.");
+            const failureBodyContent = `❌ **Analysis Step Failed**\n\nAn unexpected error occurred in the analysis step. Please review the [action logs](${checkRunUrl}) for detailed error messages.`;
+            currentBody = updateSection(currentBody, 'BODY', failureBodyContent);
+        }
         // --- 4. Update the comment on GitHub ---
-        core.info("Updating comment with final status...");
+        core.info("Updating final comment...");
         await octokit.rest.issues.updateComment({
             ...context.repo,
             comment_id: commentId,

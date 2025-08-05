@@ -78,3 +78,4 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
         RUN_ID: ${{ steps.dispatcher.outputs.run_id }}
+        QODER_RUN_OUTCOME: ${{ steps.qoder-run.outcome }}
