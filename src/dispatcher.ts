@@ -5,6 +5,10 @@ import * as fs from 'fs';
 function getSystemPrompt(pr: any): string {
   const context = `
 ### Pull Request Context
+- **Owner**: ${github.context.repo.owner}
+- **Repo**: ${github.context.repo.repo}
+- **PR Number**: #${pr.number}
+- **Branch**: ${pr.head.ref}
 - **Title**: ${pr.title}
 - **Author**: @${pr.user.login}
 - **Description**:
@@ -208,17 +212,9 @@ async function run(): Promise<void> {
 
     core.info('Gather PR infomation...');
 
-    const finalPrompt = `
-      ${userPrompt}
-      Pull Request Analysis Request:
-      - PR Number: #${pr.number}
-      - Branch: ${pr.head.ref}
-      - Title: ${pr.title}
-      - Author: @${pr.user.login}
-      - Body: ${pr.body}`;
 
-    fs.writeFileSync('./prompt.txt', finalPrompt);
-    core.info(`Prompt (first 200 chars): ${finalPrompt.substring(0, 200)}...`);
+    fs.writeFileSync('./prompt.txt', userPrompt);
+    core.info(`Prompt (first 200 chars): ${userPrompt.substring(0, 200)}...`);
 
     core.setOutput('should_run', "true");
     core.setOutput('prompt_file_path', './prompt.txt');
