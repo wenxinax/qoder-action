@@ -30032,7 +30032,7 @@ async function run() {
                 };
                 const base64Context = Buffer.from(JSON.stringify(fixContext)).toString('base64');
                 // This assumes you have a service that can decode this context
-                const fixUrl = `https://your-fix-service.com?context=${base64Context}`;
+                const fixUrl = `http://localhost:9080/reload-to-qoder?context=${base64Context}`;
                 finalFooterContent += `\n\n[✨ One-Click Qoder Fix](${fixUrl})`;
             }
             else {
