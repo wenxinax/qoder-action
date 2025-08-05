@@ -88,7 +88,7 @@ async function run(): Promise<void> {
         const base64Context = Buffer.from(JSON.stringify(fixContext)).toString('base64');
         // This assumes you have a service that can decode this context
         const fixUrl = `https://your-fix-service.com?context=${base64Context}`;
-        finalFooterContent += `\n\n[✨ One-Click Fix](${fixUrl})`;
+        finalFooterContent += `\n\n[✨ One-Click Qoder Fix](${fixUrl})`;
       } else {
         core.warning('Could not add fix URL because the review body was empty.');
       }
