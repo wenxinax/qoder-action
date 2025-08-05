@@ -58,10 +58,6 @@ runs:
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
 
-    - name: "Set up Docker Engine"
-      if: steps.dispatcher.outputs.should_run == 'true'
-      uses: docker/setup-docker-action@v4
-
     - name: "Run Qoder"
       id: qoder-run
       if: steps.dispatcher.outputs.should_run == 'true'

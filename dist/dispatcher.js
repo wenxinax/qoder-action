@@ -30097,9 +30097,9 @@ async function run() {
         }
         const mcpConfigTemplate = {
             mcpServers: {
-                github: {
-                    command: "docker",
-                    args: [
+                "github": {
+                    "command": "docker",
+                    "args": [
                         "run",
                         "-i",
                         "--rm",
@@ -30107,13 +30107,40 @@ async function run() {
                         "GITHUB_PERSONAL_ACCESS_TOKEN",
                         "ghcr.io/github/github-mcp-server"
                     ],
-                    env: [
+                    "env": [
                         "GITHUB_PERSONAL_ACCESS_TOKEN={github_token}"
+                    ]
+                },
+                "qoder-github-mcp-server": {
+                    "command": "docker",
+                    "args": [
+                        "run",
+                        "-i",
+                        "--rm",
+                        "-e", "GITHUB_TOKEN",
+                        "-e", "GITHUB_OWNER",
+                        "-e", "GITHUB_REPO",
+                        "-e", "QODER_COMMENT_ID",
+                        "-e", "QODER_COMMENT_TYPE",
+                        "ghcr.io/wenxinax/qoder-github-mcp-server:latest"
+                    ],
+                    "env": [
+                        "GITHUB_TOKEN={github_token}",
+                        "GITHUB_OWNER={github_owner}",
+                        "GITHUB_REPO={github_repo}",
+                        "QODER_COMMENT_ID={qoder_comment_id}",
+                        "QODER_COMMENT_TYPE={qoder_comment_type}"
                     ]
                 }
             }
         };
-        const configJson = JSON.stringify(mcpConfigTemplate, null, 2).replace('{github_token}', githubTokenForMcp);
+        let configJson = JSON.stringify(mcpConfigTemplate, null, 2);
+        configJson = configJson
+            .replace('{github_token}', githubTokenForMcp)
+            .replace('{github_owner}', context.repo.owner)
+            .replace('{github_repo}', context.repo.repo)
+            .replace('{qoder_comment_id}', comment.id.toString())
+            .replace('{qoder_comment_type}', 'issue'); // PR comments are issue comments
         core.info(`Rendered config.json: ${configJson}`);
         core.setOutput('qoder_config_json', configJson);
         // Prepare and set the built-in system prompt
