@@ -190,12 +190,14 @@ async function run(): Promise<void> {
     };
 
     let configJson = JSON.stringify(mcpConfigTemplate, null, 2);
+
+    // Use global regex to replace all occurrences of placeholders
     configJson = configJson
-      .replace('{github_token}', githubTokenForMcp)
-      .replace('{github_owner}', context.repo.owner)
-      .replace('{github_repo}', context.repo.repo)
-      .replace('{qoder_comment_id}', comment.id.toString())
-      .replace('{qoder_comment_type}', 'issue'); // PR comments are issue comments
+      .replace(/{github_token}/g, githubTokenForMcp)
+      .replace(/{github_owner}/g, context.repo.owner)
+      .replace(/{github_repo}/g, context.repo.repo)
+      .replace(/{qoder_comment_id}/g, comment.id.toString())
+      .replace(/{qoder_comment_type}/g, 'issue'); // PR comments are issue comments
 
     core.info(`Rendered config.json: ${configJson}`);
     core.setOutput('qoder_config_json', configJson);
