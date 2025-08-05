@@ -71,6 +71,7 @@ runs:
       with:
         prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
+        system_prompt: ${{ steps.dispatcher.outputs.system_prompt }}
         config: ${{ steps.dispatcher.outputs.qoder_config_json }}
 
     - name: "Finalize GitHub Operations"
