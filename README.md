@@ -77,12 +77,11 @@ jobs:
 
             Provide constructive feedback with specific suggestions for improvement.
             Use inline comments to highlight specific areas of concern.
-            Please use Chinese to answer.
 ```
 
 **重要提示：**
 
-- **权限配置**: 为了让 Action 能成功发布评论和 Review，你必须在 workflow 中添加 `permissions` 并授予 `pull-requests: write` 和 `issues: write` 权限。
+- **权限配置**: 为了让 Action 能成功发布评论和 Review，你必须在 workflow 中添加 `permissions` 并授予 `pull-requests: write` 权限。
 - **密钥配置**: 你必须在你的 GitHub 仓库的 `Settings` -> `Secrets and variables` -> `Actions` 中创建一个名为 `DASHSCOPE_API_KEY` 的 `Repository secret`。
 
 ## 输入参数
@@ -105,7 +104,3 @@ jobs:
 - **`qoder-core-action` (执行引擎)**: 封装了所有与 `qoder-cli` 相关的核心任务。它是一个纯粹的“执行器”，接收配置文件并运行 CLI，不关心任何上层的业务逻辑。
 
 本项目使用 `git subtree` 来管理 `qoder-core-action`。这使得我们可以在主仓库中进行统一开发，同时能将核心 Action 作为一个独立的仓库发布，供其他高阶用户复用。
-
-## 贡献
-
-欢迎各种形式的贡献！你可以提交 Pull Request，或者创建一个 Issue 来讨论任何改进建议。

@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-      issues: write
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
@@ -17,6 +16,7 @@ jobs:
       - name: "Run Qoder Auto Review"
         uses: ./ # In a real scenario, this would be your-org/qoder-action@v1
         with:
+          with_fix_url: "true"
           trigger_on: "event"
           dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
           prompt: |
