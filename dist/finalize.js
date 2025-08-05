@@ -30023,12 +30023,11 @@ async function run() {
         if (withFixUrl) {
             const qoderBody = getSectionContent(currentBody, 'BODY');
             if (qoderBody) {
-                const fixPrompt = "Please fix the issues raised in the code review above.";
+                const fixPrompt = `Based on the following code review for pull request #${pr.number}, please fix the identified issues.\n\n**PR Title**: ${pr.title}\n**Author**: @${pr.user.login}\n\n---\n\n**Review Comments**:\n${qoderBody}`;
                 const fixContext = {
                     repo: context.repo.repo,
                     owner: context.repo.owner,
                     prNumber: pr.number,
-                    qoderBody: qoderBody,
                     prompt: fixPrompt
                 };
                 const base64Context = Buffer.from(JSON.stringify(fixContext)).toString('base64');
