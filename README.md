@@ -49,11 +49,13 @@ on:
   pull_request:
     types: [opened, synchronize]
 
+permissions:
+  pull-requests: write
+  id-token: write
+
 jobs:
   auto-review:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
@@ -62,8 +64,9 @@ jobs:
         uses: wenxinax/qoder-action@main 
         with:
           trigger_on: "event"
+          # 用于 AI 模型的 API Key
           dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # 要传递给 AI 的指令
           prompt: |
             Please review this pull request and provide comprehensive feedback.
 
@@ -81,7 +84,8 @@ jobs:
 
 **重要提示：**
 
-- **权限配置**: 为了让 Action 能成功发布评论和 Review，你必须在 workflow 中添加 `permissions` 并授予 `pull-requests: write` 权限。
+- **GitHub App 安装**: 你必须在你的仓库或组织中安装 Qoder GitHub App，并授予其访问权限。
+- **权限配置**: 为了让 Action 能成功获取身份令牌并发布评论，你必须在 workflow 中添加 `permissions` 并授予 `pull-requests: write` 和 `id-token: write` 权限。
 - **密钥配置**: 你必须在你的 GitHub 仓库的 `Settings` -> `Secrets and variables` -> `Actions` 中创建一个名为 `DASHSCOPE_API_KEY` 的 `Repository secret`。
 
 ## 输入参数
@@ -92,7 +96,6 @@ jobs:
 | `mention_phrase`    | 当 `trigger_on` 为 `mention` 时，在评论中需要匹配的短语。            | `false`  | `@qoder`       |
 | `prompt`            | 提供给 AI 的高级指令。                                               | `false`  |                |
 | `dashscope_api_key` | 用于 Qoder 服务的身份验证令牌 (Dashscope API Key)。                  | `true`   |                |
-| `github_token`      | 用于执行 GitHub API 操作的令牌。                                     | `false`  | `${{ github.token }}` |
 | `timeout_minutes`   | Action 执行的超时时间（分钟）。                                      | `false`  | `60`           |
 
 ## 设计理念

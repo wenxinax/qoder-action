@@ -1,6 +1,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import * as fs from 'fs';
+import { HttpClient } from '@actions/http-client';
 
 function getSystemPrompt(pr: any): string {
   const context = `
@@ -85,32 +86,65 @@ f. 如果你无法完成某些步骤（例如运行代码检查器或测试套�
 `;
 
   return instructions;
-}   
+}
+
+async function getGithubToken(): Promise<string> {
+  core.info('Requesting OIDC token...');
+  const agentUrl = 'http://dev.lingma-agents-api.aliyuncs.com';
+  const oidcToken = await core.getIDToken();
+  core.info(`Successfully retrieved OIDC token (length: ${oidcToken.length}).`);
+  core.debug(`OIDC Token (first 30 chars): ${oidcToken.substring(0, 30)}...`);
+
+  const exchangeUrl = `${agentUrl}/v1/github/oidc/token`;
+  core.info(`Exchanging OIDC token at: ${exchangeUrl}`)
+
+  const httpClient = new HttpClient('qoder-action');
+  const response = await httpClient.post(
+    exchangeUrl,
+    `oidc_token=${encodeURIComponent(oidcToken)}`, // 发送 x-www-form-urlencoded 数据
+    {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  );
+
+  core.info(`Received response with status code: ${response.message.statusCode}`);
+  const body = await response.readBody();
+  core.info(`Response body: ${body}`);
+
+  if (response.message.statusCode !== 200) {
+    throw new Error(`Failed to get github_token. Status: ${response.message.statusCode}. Body: ${body}`);
+  }
+
+  const { github_token } = JSON.parse(body);
+
+  if (!github_token) {
+    throw new Error('github_token not found in response.');
+  }
+
+  core.info('Successfully exchanged OIDC token for github_token.');
+  return github_token;
+}
 
 async function run(): Promise<void> {
   try {
+    const githubToken = await getGithubToken();
+    core.setOutput('github_token', githubToken);
+    core.setSecret(githubToken);
+
     const triggerOn = core.getInput('trigger_on', { required: true });
     core.info(`Triggering on: ${triggerOn}`);
     const userPrompt = core.getInput('prompt');
 
-    // Manually check for required prompt based on trigger
     if (triggerOn === 'event' && !userPrompt) {
       core.setFailed('The "prompt" input is required when "trigger_on" is "event".');
       return;
-    }
-
-    const githubToken = core.getInput('github_token', { required: true });
-    if (!githubToken) {
-      throw new Error("GITHUB_TOKEN is required but not provided.");
     }
 
     const octokit = github.getOctokit(githubToken);
     const context = github.context;
 
     if (context.eventName !== "pull_request") {
-      core.info(
-        `Skipping Qoder action execution because the event is not a pull request.`,
-      );
+      core.info(`Skipping Qoder action execution because the event is not a pull request.`);
       core.setOutput("should_run", "false");
       return;
     }
@@ -127,13 +161,23 @@ async function run(): Promise<void> {
 
     core.info("Creating initial status comment...");
 
-    const header = `<!-- QODER_HEADER_START -->\n👋 Hello! I'm Qoder, your AI code assistant.\n<!-- QODER_HEADER_END -->`;
-    const body = `<!-- QODER_BODY_START -->\n⏳ I'm currently analyzing this pull request. I will post my findings directly in the PR thread.\n<!-- QODER_BODY_END -->`;
+    const header = `<!-- QODER_HEADER_START -->
+👋 Hello! I'm Qoder, your AI code assistant.
+<!-- QODER_HEADER_END -->`;
+    const body = `<!-- QODER_BODY_START -->
+⏳ I'm currently analyzing this pull request. I will post my findings directly in the PR thread.
+<!-- QODER_BODY_END -->`;
     const footer = `<!-- QODER_FOOTER_START -->
 *You can view the live progress in the [action logs](${checkRunUrl}).*
 <!-- QODER_FOOTER_END -->`;
 
-    const welcomeMessage = `${header}\n\n---\n\n${body}\n\n${footer}`;
+    const welcomeMessage = `${header}
+
+---
+
+${body}
+
+${footer}`;
 
     const { data: comment } = await octokit.rest.issues.createComment({
       ...context.repo,
@@ -143,15 +187,6 @@ async function run(): Promise<void> {
     core.info(`Initial comment created with ID: ${comment.id}`);
     core.setOutput('comment_id', comment.id.toString());
     core.setOutput('run_id', runId.toString());
-
-    // Prepare the MCP server config by injecting the real GitHub token
-    const githubTokenForMcp = core.getInput('github_token', { required: true });
-    if (githubTokenForMcp) {
-      core.info(`Successfully read github_token. Length: ${githubTokenForMcp.length}`);
-    } else {
-      core.setFailed('Failed to read github_token, it is empty.');
-      return;
-    }
 
     const mcpConfigTemplate = {
       mcpServers: {
@@ -195,23 +230,18 @@ async function run(): Promise<void> {
 
     let configJson = JSON.stringify(mcpConfigTemplate, null, 2);
 
-    // Use global regex to replace all occurrences of placeholders
     configJson = configJson
-      .replace(/{github_token}/g, githubTokenForMcp)
+      .replace(/{github_token}/g, githubToken)
       .replace(/{github_owner}/g, context.repo.owner)
       .replace(/{github_repo}/g, context.repo.repo)
       .replace(/{qoder_comment_id}/g, comment.id.toString())
-      .replace(/{qoder_comment_type}/g, 'issue'); // PR comments are issue comments
+      .replace(/{qoder_comment_type}/g, 'issue');
 
     core.info(`Rendered config.json: ${configJson}`);
     core.setOutput('qoder_config_json', configJson);
 
-    // Prepare and set the built-in system prompt
     const systemPrompt = getSystemPrompt(pr);
     core.setOutput('system_prompt', systemPrompt);
-
-    core.info('Gather PR infomation...');
-
 
     fs.writeFileSync('./prompt.txt', userPrompt);
     core.info(`Prompt (first 200 chars): ${userPrompt.substring(0, 200)}...`);
