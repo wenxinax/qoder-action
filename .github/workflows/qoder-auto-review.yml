@@ -23,14 +23,21 @@ jobs:
           prompt: |
             Please review this pull request and provide comprehensive feedback.
 
-            Focus on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security implications
-            - Test coverage
-            - Documentation updates if needed
-
-            Provide constructive feedback with specific suggestions for improvement.
-            Use inline comments to highlight specific areas of concern.
-            请使用中文回答。
+            # REVIEW PRINCIPLES
+            a. Infer the author’s intent from the provided information and verify that the code changes fully realize that intent without introducing unintended side effects.
+            b. **Focus on critical issues**—your value is in uncovering deep problems that humans often overlook:
+              - Logic Error: Code whose behavior deviates from expectations or fails to cover all business scenarios.
+              - Security: Vulnerabilities such as SQL injection, XSS, insecure authentication, or exposure of sensitive data.
+              - Concurrency: Code that could cause race conditions or deadlocks in a multi-threaded or multi-process environment.
+              - Resource Management: Unclosed file handles, database connections, or other memory/resource leaks.
+              - Performance: Algorithms or implementations that will noticeably degrade system performance.
+              - Robustness: Unhandled exceptions/errors or unsafe nil/null handling that could crash the application.
+              - Architecture: Violations of established project design patterns or introduction of unnecessary complexity that will hinder future maintenance.
+              - Style violations that hurt readability or maintainability
+            
+            # NOTICE
+            a. Use inline comments to highlight specific areas of concern. Include reasoning about why the issue matters and how it impacts the code quality, performance, or reliability.
+            b. When you submit the review, please provide your final comprehensive report. The report must include:
+              - A summary of all inline comments, including both the comment content and the associated structured code snippets.
+              - An overall assessment of the entire PR along with recommended next actions.
+            c. 请使用中文作答。
