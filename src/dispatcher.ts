@@ -240,6 +240,7 @@ ${footer}`;
 - **Description**:
 ${pr.body || 'No description provided.'}
 
+ 请务必使用 qoder_update_comment 工具更新的 plan 进展和最终的任务总结，因为这是你与用户交互的唯一窗口。
  以下是用户的直接指令，请判断用户意图，并按照用户意图执行你的任务。
 
 ${userPrompt}`;
