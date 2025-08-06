@@ -115,14 +115,14 @@ async function getGithubToken(): Promise<string> {
     throw new Error(`Failed to get github_token. Status: ${response.message.statusCode}. Body: ${body}`);
   }
 
-  const { github_token } = JSON.parse(body);
+  const { installation_token } = JSON.parse(body);
 
-  if (!github_token) {
-    throw new Error('github_token not found in response.');
+  if (!installation_token) {
+    throw new Error('`installation_token` not found in response.');
   }
 
   core.info('Successfully exchanged OIDC token for github_token.');
-  return github_token;
+  return installation_token;
 }
 
 async function run(): Promise<void> {
