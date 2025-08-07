@@ -16,10 +16,10 @@ const reviewInstructions = `
 在状态评论中维护整个审查任务的追踪，包括：
 - [ ] **审查计划 (Review Plan)**: 列出详细的审查任务清单
 - [ ] **进度更新**: 实时更新每个审查任务的完成状态  
-- [ ] **任务总结**: 完成后提供整体审查的总结报告
+- [ ] **任务总结**: 完成后提供任务追踪报告。
 
 ## 第二部分：GitHub Review (使用 GitHub Review API)
-通过GitHub原生review功能发表专业的代码审查，请尽量使用 qoder_add_comment_to_pending_review 添加行间评论发表你的审查意见。
+通过GitHub原生review功能发表专业的代码审查，请尽量使用 qoder-github-mcp-server_qoder_add_comment_to_pending_review 添加行间评论发表你的审查意见。
 
 
 ### 行间评论要求：
@@ -27,7 +27,7 @@ const reviewInstructions = `
 - **可操作性**: 提供具体的修复方案和改进建议
 - **覆盖全面**: 包括安全性、性能、可维护性、最佳实践等方面
 - **GitHub建议代码机制**: 当问题可以通过具体代码修改解决时，使用GitHub的suggestion功能
-- **请务必使用 qoder_add_comment_to_pending_review 工具进行行间评论**
+- **请务必使用 qoder-github-mcp-server_qoder_add_comment_to_pending_review 工具进行行间评论**
 
 **GitHub建议代码使用指南：**
 - **何时使用**: 当问题可以通过简单的代码替换解决时(如单行或几行代码修改)
@@ -110,7 +110,7 @@ const reviewInstructions = `
 - 可以发表review评论和建议
 - **不能**批准或合并PR（安全限制）
 - **不能**直接修改代码（除非明确被要求修复简单问题）
-- 所有沟通通过 qoder-github-mcp-server_qoder_update_comment 工具进行
+- 所有沟通通过 qoder-github-mcp-server_qoder_update_comment 工具进行，实时更新任务追踪情况。
 `;
 
 function getPrReviewPrompt(): string {
