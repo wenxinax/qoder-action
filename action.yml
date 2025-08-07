@@ -26,21 +26,28 @@ inputs:
   dashscope_api_key:
     description: "Required. The authentication token for the Qoder service."
     required: true
-  github_token:
-    description: "The GitHub token for API operations."
-    required: false
-    default: ${{ github.token }}
 
   ## Execution Control
   timeout_minutes:
     description: "Timeout in minutes for the action's execution."
     required: false
     default: "60"
+  with_fix_url:
+    description: "Whether to include a 'fix url' in the final comment."
+    required: false
+    default: "false"
+  with_review_prompt:
+    description: "Whether to use review system prompt"
+    required: false
+    default: "false"
 
 # ==================================
 # OUTPUTS
 # ==================================
-
+outputs:
+  github_token:
+    description: "The GitHub App installation token."
+    value: ${{ steps.dispatcher.outputs.github_token }}
 
 # ==================================
 # EXECUTION STEPS
@@ -56,22 +63,26 @@ runs:
         INPUT_TRIGGER_ON: ${{ inputs.trigger_on }}
         INPUT_MENTION_PHRASE: ${{ inputs.mention_phrase }}
         INPUT_PROMPT: ${{ inputs.prompt }}
-        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
 
     - name: "Run Qoder"
       id: qoder-run
       if: steps.dispatcher.outputs.should_run == 'true'
-      uses: ./qoder-core-action
+      uses: wenxinax/qoder-core-action@main
+      env: 
+        GH_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
       with:
         prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
-        # system_prompt: 'Optional: Add a system prompt here if needed'
+        system_prompt: ${{ steps.dispatcher.outputs.system_prompt }}
+        config: ${{ steps.dispatcher.outputs.qoder_config_json }}
 
     - name: "Finalize GitHub Operations"
       if: always() && steps.dispatcher.outputs.should_run == 'true'
       shell: bash
       run: node ${GITHUB_ACTION_PATH}/dist/finalize.js
       env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
         COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
-        RESULT_CONTENT: ${{ steps.qoder-run.outputs.result_content }}
+        RUN_ID: ${{ steps.dispatcher.outputs.run_id }}
+        QODER_RUN_OUTCOME: ${{ steps.qoder-run.outcome }}
+        WITH_FIX_URL: ${{ inputs.with_fix_url }}
