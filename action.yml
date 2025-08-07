@@ -36,6 +36,10 @@ inputs:
     description: "Whether to include a 'fix url' in the final comment."
     required: false
     default: "false"
+  with_review_prompt:
+    description: "Whether to use review system prompt"
+    required: false
+    default: "false"
 
 # ==================================
 # OUTPUTS
