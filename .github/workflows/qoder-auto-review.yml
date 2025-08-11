@@ -17,9 +17,12 @@ jobs:
       - name: "Run Qoder Auto Review"
         uses: ./ # In a real scenario, this would be your-org/qoder-action@v1
         with:
-          with_fix_url: "true"
-          trigger_on: "event"
+          # Use the built-in Code Review scene.
+          scene: cr
           dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
-          with_review_prompt: "true"
-          prompt: |
-             请使用中文作答。
+
+          # (Optional) If you have specific review rules, add them here.
+          # append_prompt: |
+          #   Please pay special attention to:
+          #   1. Concurrency safety issues in Go.
+          #   2. SQL injection vulnerabilities.

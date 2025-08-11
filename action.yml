@@ -1,88 +1,68 @@
-# qoder-action/action.yml
+# action.yml
 
-name: "Qoder Action"
-description: "An intelligent code assistant powered by the Qoder CLI."
-branding:
-  icon: "code"
-  color: "green"
+name: 'Qoder Action'
+description: 'A flexible and composable GitHub Action framework for qoder-cli.'
+author: 'qoder-ai'
 
-# ==================================
-# INPUTS
-# ==================================
 inputs:
-  trigger_on:
-    description: "Required. Defines the trigger mechanism. Must be one of: 'mention', 'event'."
+  scene:
+    description: |
+      The scenario for the action, determining built-in prompts and logic.
+      - `cr`: Code Review mode. Uses built-in prompts for code analysis. Allows customization via `append_prompt`.
+      - `mention`: Mention mode. Responds to user mentions in comments. Allows customization of reply style via `append_prompt`.
+      - `custom`: Custom mode. Requires a `prompt` to define the task, and allows a custom `system_prompt`.
     required: true
-  mention_phrase:
-    description: "The phrase to look for in comments when trigger_on is 'mention'."
+    default: 'cr'
+
+  append_prompt:
+    description: 'For `cr` or `mention` scenes. Appends additional instructions to the built-in prompt.'
     required: false
-    default: "@qoder"
 
   prompt:
-    description: "The instruction for Qoder. Required when trigger_on is 'event'."
+    description: "Required for `custom` scene. A detailed prompt that tells qoder what to do."
+    required: false
+  system_prompt:
+    description: "Optional for `custom` scene. A system prompt to guide the model's behavior. A default is used if not provided."
     required: false
 
-  ## Authentication & Configuration
+  github_token:
+    description: 'The GitHub token for authentication.'
+    required: true
+    default: ${{ github.token }}
+
   dashscope_api_key:
-    description: "Required. The authentication token for the Qoder service."
+    description: 'The Dashscope API key for LLM services.'
     required: true
 
-  ## Execution Control
-  timeout_minutes:
-    description: "Timeout in minutes for the action's execution."
-    required: false
-    default: "60"
-  with_fix_url:
-    description: "Whether to include a 'fix url' in the final comment."
-    required: false
-    default: "false"
-  with_review_prompt:
-    description: "Whether to use review system prompt"
-    required: false
-    default: "false"
-
-# ==================================
-# OUTPUTS
-# ==================================
-outputs:
-  github_token:
-    description: "The GitHub App installation token."
-    value: ${{ steps.dispatcher.outputs.github_token }}
-
-# ==================================
-# EXECUTION STEPS
-# ==================================
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - name: "Dispatch Qoder Task"
+    - name: Dispatcher
       id: dispatcher
-      shell: bash
-      run: node ${GITHUB_ACTION_PATH}/dist/dispatcher.js
-      env:
-        INPUT_TRIGGER_ON: ${{ inputs.trigger_on }}
-        INPUT_MENTION_PHRASE: ${{ inputs.mention_phrase }}
-        INPUT_PROMPT: ${{ inputs.prompt }}
-
-    - name: "Run Qoder"
-      id: qoder-run
-      if: steps.dispatcher.outputs.should_run == 'true'
-      uses: wenxinax/qoder-core-action@main
-      env: 
-        GH_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
+      uses: ./
       with:
-        prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
-        dashscope_api_key: ${{ inputs.dashscope_api_key }}
-        system_prompt: ${{ steps.dispatcher.outputs.system_prompt }}
-        config: ${{ steps.dispatcher.outputs.qoder_config_json }}
+        scene: ${{ inputs.scene }}
+        append_prompt: ${{ inputs.append_prompt }}
+        prompt: ${{ inputs.prompt }}
+        system_prompt: ${{ inputs.system_prompt }}
+        github_token: ${{ inputs.github_token }}
 
-    - name: "Finalize GitHub Operations"
-      if: always() && steps.dispatcher.outputs.should_run == 'true'
-      shell: bash
-      run: node ${GITHUB_ACTION_PATH}/dist/finalize.js
-      env:
-        GITHUB_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
-        COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
-        RUN_ID: ${{ steps.dispatcher.outputs.run_id }}
-        QODER_RUN_OUTCOME: ${{ steps.qoder-run.outcome }}
-        WITH_FIX_URL: ${{ inputs.with_fix_url }}
+    - name: Run Qoder Core Action
+      id: qoder
+      uses: ./qoder-core-action
+      with:
+        system_prompt_path: ${{ steps.dispatcher.outputs.system_prompt_path }}
+        prompt_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
+        qoder_config_json: ${{ steps.dispatcher.outputs.qoder_config_json }}
+        github_token: ${{ inputs.github_token }}
+        dashscope_api_key: ${{ inputs.dashscope_api_key }}
+
+    - name: Finalize
+      if: always()
+      uses: ./
+      with:
+        scene: ${{ inputs.scene }}
+        comment_id: ${{ steps.dispatcher.outputs.comment_id }}
+        job_status: ${{ job.status }}
+        qoder_result: ${{ steps.qoder.outputs.result }}
+        github_token: ${{ inputs.github_token }}
