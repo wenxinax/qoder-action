@@ -60,7 +60,6 @@ async function run(): Promise<void> {
     let finalUserPrompt: string;
 
     // 2. Create Initial Status Comment (if applicable)
-    // This logic is kept from the original to provide immediate feedback.
     const pr = context.payload.pull_request;
     if (!pr) {
         throw new Error("Action currently only supports pull_request events.");
@@ -93,18 +92,11 @@ async function run(): Promise<void> {
     core.info(`Processing scene: ${scene}`);
     switch (scene) {
       case 'cr':
-        const diffResponse = await octokit.rest.pulls.get({
-          ...context.repo,
-          pull_number: pr.number,
-          mediaType: { format: 'diff' },
-        });
-        const diff = diffResponse.data as unknown as string;
         finalSystemPrompt = getCrSystemPrompt();
-        finalUserPrompt = getCrUserPrompt(diff, core.getInput('append_prompt'));
+        finalUserPrompt = getCrUserPrompt(pr, core.getInput('append_prompt'));
         break;
 
       case 'mention':
-        // This requires the action to be triggered on `issue_comment`.
         if (context.eventName !== 'issue_comment') {
           throw new Error("The 'mention' scene must be used with an 'issue_comment' event.");
         }
@@ -119,7 +111,6 @@ async function run(): Promise<void> {
       case 'custom':
         const userPrompt = core.getInput('prompt', { required: true });
         finalSystemPrompt = core.getInput('system_prompt') || getDefaultSystemPrompt();
-        // Enrich the user prompt with PR context, similar to the original implementation
         finalUserPrompt = `### Pull Request Context
 - **Title**: ${pr.title}
 - **Author**: @${pr.user.login}
@@ -139,17 +130,8 @@ ${userPrompt}`;
         mcpServers: {
           "github": {
             "command": "docker",
-            "args": [
-              "run",
-              "-i",
-              "--rm",
-              "-e",
-              "GITHUB_PERSONAL_ACCESS_TOKEN",
-              "ghcr.io/github/github-mcp-server"
-            ],
-            "env": [
-              "GITHUB_PERSONAL_ACCESS_TOKEN={github_token}"
-            ]
+            "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
+            "env": ["GITHUB_PERSONAL_ACCESS_TOKEN={github_token}"]
           },
           "qoder-github-mcp-server": {
             "command": "docker",

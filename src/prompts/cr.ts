@@ -1,3 +1,4 @@
+import { context } from '@actions/github';
 
 export function getCrSystemPrompt(): string {
   return `
@@ -38,9 +39,9 @@ export function getCrSystemPrompt(): string {
   - 需要新增函数或类的场景
 - **使用格式**: 在行间评论中使用三个反引号加suggestion关键字来包裹建议的代码 
   例如：
-  ```suggestion
+  \`\`\`suggestion
         suggetsion code content
-        ```
+  \`\`\`
 
 
 ### Review Summary要求（最终review提交时必须包含）：
@@ -48,7 +49,7 @@ export function getCrSystemPrompt(): string {
    - 变更范围和目的
    - 主要修改的文件和功能
 
-2. **整体审查意见**:
+2. **整体审查意见**: 
    - 对行间评论的汇总
    - 行间评论未包含的建议
 
@@ -110,21 +111,25 @@ export function getCrSystemPrompt(): string {
 `;
 }
 
-export function getCrUserPrompt(diff: string, appendPrompt?: string): string {
-  const userInstruction = `
-请根据以上 system prompt 中定义的角色和职责，对以下代码变更进行审查。
-
-这是本次 Pull Request 的 diff 内容：
-
-```diff
-${diff}
-```
-
-${appendPrompt ? `
-另外，请特别注意以下由用户提供的额外审查规则：
-${appendPrompt}
-` : ''}
-`;
-  return userInstruction;
+interface PullRequestContext {
+    number: number;
+    head?: { ref: string };
+    title?: string | null;
+    user?: { login: string } | null;
+    body?: string | null;
 }
 
+export function getCrUserPrompt(pr: PullRequestContext, appendPrompt?: string): string {
+    return `### Pull Request Context
+- **Owner**: ${context.repo.owner}
+- **Repo**: ${context.repo.repo}
+- **PR Number**: #${pr.number}
+- **Branch**: ${pr.head?.ref || 'unknown'}
+- **Title**: ${pr.title || 'No title'}
+- **Author**: @${pr.user?.login || 'unknown'}
+- **Description**:
+${pr.body || 'No description provided.'}
+
+### User Instruction
+${appendPrompt || 'No user instruction provided.'}`;
+}

@@ -29963,17 +29963,6 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(6307));
 const github = __importStar(__nccwpck_require__(1967));
-function getSectionContent(body, section) {
-    const startMarker = `<!-- QODER_${section}_START -->`;
-    const endMarker = `<!-- QODER_${section}_END -->`;
-    const startIndex = body.indexOf(startMarker);
-    const endIndex = body.indexOf(endMarker);
-    if (startIndex === -1 || endIndex === -1) {
-        core.warning(`Could not find markers for section ${section} in comment body.`);
-        return '';
-    }
-    return body.substring(startIndex + startMarker.length, endIndex).trim();
-}
 // Helper function to update a section of the comment
 function updateSection(originalBody, section, newContent) {
     const startMarker = `<!-- QODER_${section}_START -->`;
@@ -29981,8 +29970,8 @@ function updateSection(originalBody, section, newContent) {
     const startIndex = originalBody.indexOf(startMarker);
     const endIndex = originalBody.indexOf(endMarker);
     if (startIndex === -1 || endIndex === -1) {
-        core.warning(`Could not find markers for section ${section}. The comment might not be updated as expected.`);
-        return `${originalBody}\n\n${newContent}`;
+        core.warning(`Could not find markers for section ${section}.`);
+        return originalBody; // Return original body if markers are not found
     }
     const before = originalBody.substring(0, startIndex + startMarker.length);
     const after = originalBody.substring(endIndex);
@@ -29990,16 +29979,13 @@ function updateSection(originalBody, section, newContent) {
 }
 async function run() {
     try {
-        const githubToken = process.env.GITHUB_TOKEN;
-        const commentIdStr = process.env.COMMENT_ID;
-        const runId = process.env.RUN_ID;
-        const qoderRunOutcome = process.env.QODER_RUN_OUTCOME || 'success';
-        const withFixUrl = process.env.WITH_FIX_URL === 'true';
-        if (!githubToken) {
-            throw new Error("GITHUB_TOKEN is required but not provided.");
-        }
+        const githubToken = core.getInput('github_token', { required: true });
+        const commentIdStr = core.getInput('comment_id');
+        const jobStatus = core.getInput('job_status', { required: true });
+        const scene = core.getInput('scene', { required: true });
+        const qoderResult = core.getInput('qoder_result') || '';
         if (!commentIdStr) {
-            core.info("No comment ID provided, skipping comment update.");
+            core.info("No comment_id provided, skipping finalization.");
             return;
         }
         const commentId = parseInt(commentIdStr, 10);
@@ -30007,47 +29993,48 @@ async function run() {
         const context = github.context;
         const pr = context.payload.pull_request;
         if (!pr) {
-            throw new Error("Pull request payload is missing.");
+            throw new Error("Finalize step must be run in the context of a pull_request.");
         }
-        // --- 1. Fetch the existing comment ---
-        core.info(`Fetching existing comment with ID: ${commentId}`);
         const { data: existingComment } = await octokit.rest.issues.getComment({
             ...context.repo,
             comment_id: commentId,
         });
         let currentBody = existingComment.body || '';
-        const checkRunUrl = `${pr.html_url}/checks?check_run_id=${runId}`;
-        // --- 2. Define the new content for footer ---
-        let finalFooterContent = `*Workflow finished. You can view the full execution details in the [action logs](${checkRunUrl}).*`;
-        // --- 3. Add the fix URL if requested ---
-        if (withFixUrl) {
-            const qoderBody = getSectionContent(currentBody, 'BODY');
-            if (qoderBody) {
-                const fixPrompt = `Based on the following code review for pull request #${pr.number}, please fix the identified issues.\n\n**PR Title**: ${pr.title}\n**Author**: @${pr.user.login}\n\n---\n\n**Review Comments**:\n${qoderBody}`;
+        let bodyContent = null;
+        let footerContent;
+        const checkRunUrl = `${pr.html_url}/checks?check_run_id=${context.runId}`;
+        if (jobStatus === 'failure' || jobStatus === 'cancelled') {
+            const status = jobStatus === 'failure' ? 'failed' : 'cancelled';
+            bodyContent = `❌ **The AI task for the 
+${scene}
+ scene has ${status}.**\n\nPlease review the [action logs](${checkRunUrl}) for details.`;
+            footerContent = `*Workflow ${status}.*`;
+        }
+        else {
+            footerContent = `*Workflow finished successfully. You can view the full execution details in the [action logs](${checkRunUrl}).*`;
+            if (scene === 'cr') {
+                const promptText = [
+                    `Based on the following code review for pull request #${pr.number}, please fix the identified issues.`,
+                    `\n**PR Title**: ${pr.title}`,
+                    '---',
+                    '**Review Summary**:',
+                    qoderResult
+                ].join('\n');
                 const fixContext = {
                     repo: context.repo.repo,
                     owner: context.repo.owner,
                     prNumber: pr.number,
-                    prompt: fixPrompt
+                    prompt: promptText
                 };
                 const base64Context = Buffer.from(JSON.stringify(fixContext)).toString('base64');
-                // This assumes you have a service that can decode this context
                 const fixUrl = `http://localhost:9080/reload-to-qoder?context=${base64Context}`;
-                finalFooterContent += `\n\n[✨ One-Click Qoder Fix](${fixUrl})`;
-            }
-            else {
-                core.warning('Could not add fix URL because the review body was empty.');
+                footerContent += `\n\n[✨ One-Click Qoder Fix](${fixUrl})`;
             }
         }
-        currentBody = updateSection(currentBody, 'FOOTER', finalFooterContent);
-        // --- 4. If the core step failed, we MUST update the body to reflect that ---
-        if (qoderRunOutcome === 'failure') {
-            core.error("The qoder-run step failed. Overwriting body with failure message.");
-            const failureBodyContent = `❌ **Analysis Step Failed**\n\nAn unexpected error occurred in the analysis step. Please review the [action logs](${checkRunUrl}) for detailed error messages.`;
-            currentBody = updateSection(currentBody, 'BODY', failureBodyContent);
+        if (bodyContent) {
+            currentBody = updateSection(currentBody, 'BODY', bodyContent);
         }
-        // --- 5. Update the comment on GitHub ---
-        core.info("Updating final comment...");
+        currentBody = updateSection(currentBody, 'FOOTER', footerContent);
         await octokit.rest.issues.updateComment({
             ...context.repo,
             comment_id: commentId,
