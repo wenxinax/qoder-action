@@ -30043,11 +30043,17 @@ async function run() {
             }
             case 'mention': {
                 core.info(JSON.stringify(context, null, 2));
+                core.info('-----------------');
+                core.info(`Event name: ${context.eventName}`);
+                core.info('-----------------');
+                const commentPayload = context.payload.comment;
+                core.info('Comment payload:');
+                core.info(JSON.stringify(commentPayload, null, 2));
+                core.info('-----------------');
                 const allowedEvents = ['issue_comment', 'pull_request_review_comment'];
                 if (!allowedEvents.includes(context.eventName)) {
                     throw new Error(`The 'mention' scene only works with '${allowedEvents.join("or ")}' events.`);
                 }
-                const commentPayload = context.payload.comment;
                 if (!commentPayload) {
                     core.info("Comment payload is missing, skipping.");
                     core.setOutput('should_run', 'false');
