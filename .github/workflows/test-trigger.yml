@@ -1,0 +1,17 @@
+
+name: Test Trigger
+
+on:
+  issue_comment:
+    types: [created, edited, deleted]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
+  pull_request_review_thread_comment:
+    types: [created, edited, deleted]
+
+jobs:
+  test-trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo
+        run: echo "Workflow triggered! Event: ${{ github.event_name }}"
