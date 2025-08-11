@@ -155,12 +155,22 @@ async function run(): Promise<void> {
         }
 
         if ('in_reply_to_id' in commentPayload && commentPayload.in_reply_to_id) {
-          // This is a threaded reply, fetch the thread context
-          const { data: thread } = await octokit.rest.issues.listComments({
-            ...context.repo,
-            issue_number: source.number,
-          });
-          mentionContext.thread = thread.filter(c => c.id === commentPayload.in_reply_to_id || ('in_reply_to_id' in c && c.in_reply_to_id === commentPayload.in_reply_to_id));
+          const allComments = pr
+            ? (await octokit.rest.pulls.listReviewComments({ ...context.repo, pull_number: pr.number })).data
+            : (await octokit.rest.issues.listComments({ ...context.repo, issue_number: issue.number })).data;
+
+          const buildThread = (commentId: number) => {
+            const thread: (IssueComment | PullRequestReviewComment)[] = [];
+            let currentComment: any = allComments.find(c => c.id === commentId);
+            while (currentComment) {
+              thread.unshift(currentComment);
+              const parentId = currentComment.in_reply_to_id;
+              currentComment = parentId ? allComments.find(c => c.id === parentId) : undefined;
+            }
+            return thread;
+          };
+
+          mentionContext.thread = buildThread(commentPayload.id);
         }
 
         const runId = context.runId;
