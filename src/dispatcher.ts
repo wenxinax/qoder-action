@@ -4,8 +4,9 @@ import * as github from '@actions/github';
 import * as fs from 'fs';
 import { HttpClient } from '@actions/http-client';
 import { getCrSystemPrompt, getCrUserPrompt } from './prompts/cr';
-import { getMentionSystemPrompt, getMentionUserPrompt } from './prompts/mention';
+import { getMentionSystemPrompt, getMentionUserPrompt, MentionContext } from './prompts/mention';
 import { getDefaultSystemPrompt } from './prompts/custom';
+import { Issue, PullRequest, IssueComment, PullRequestReviewComment } from '@octokit/webhooks-types';
 
 // This function is preserved from the original file to handle authentication.
 async function getGithubToken(): Promise<string> {
@@ -58,15 +59,20 @@ async function run(): Promise<void> {
 
     let finalSystemPrompt: string;
     let finalUserPrompt: string;
+    let commentId: string;
+    let commentType: 'issue' | 'pull' = 'issue';
 
-    // 2. Create Initial Status Comment (if applicable)
-    const pr = context.payload.pull_request;
-    if (!pr) {
-        throw new Error("Action currently only supports pull_request events.");
-    }
-    const runId = context.runId;
-    const checkRunUrl = `${pr.html_url}/checks?check_run_id=${runId}`;
-    const welcomeMessage = `<!-- QODER_HEADER_START -->
+    // 3. Scene-based Logic
+    core.info(`Processing scene: ${scene}`);
+    switch (scene) {
+      case 'cr': {
+        const pr = context.payload.pull_request;
+        if (!pr) {
+            throw new Error("Action currently only supports pull_request events.");
+        }
+        const runId = context.runId;
+        const checkRunUrl = `${pr.html_url}/checks?check_run_id=${runId}`;
+        const welcomeMessage = `<!-- QODER_HEADER_START -->
 👋 Hello! I'm Qoder, your AI code assistant.
 <!-- QODER_HEADER_END -->
 
@@ -80,35 +86,131 @@ async function run(): Promise<void> {
 *You can view the live progress in the [action logs](${checkRunUrl}).*
 <!-- QODER_FOOTER_END -->`;
 
-    const { data: comment } = await octokit.rest.issues.createComment({
-        ...context.repo,
-        issue_number: pr.number,
-        body: welcomeMessage,
-    });
-    core.info(`Initial comment created with ID: ${comment.id}`);
-    core.setOutput('comment_id', comment.id.toString());
-
-    // 3. Scene-based Logic
-    core.info(`Processing scene: ${scene}`);
-    switch (scene) {
-      case 'cr':
+        const { data: comment } = await octokit.rest.issues.createComment({
+            ...context.repo,
+            issue_number: pr.number,
+            body: welcomeMessage,
+        });
+        commentId = comment.id.toString();
+        core.info(`Initial comment created with ID: ${commentId}`);
         finalSystemPrompt = getCrSystemPrompt();
-        finalUserPrompt = getCrUserPrompt(pr, core.getInput('append_prompt'));
+        finalUserPrompt = getCrUserPrompt(pr as PullRequest, core.getInput('append_prompt'));
         break;
+      }
 
-      case 'mention':
-        if (context.eventName !== 'issue_comment') {
-          throw new Error("The 'mention' scene must be used with an 'issue_comment' event.");
+      case 'mention': {
+        const allowedEvents = ['issue_comment', 'pull_request_review_comment'];
+        if (!allowedEvents.includes(context.eventName)) {
+          throw new Error(`The 'mention' scene only works with '${allowedEvents.join("or ")}' events.`);
         }
-        const commentBody = context.payload.comment?.body;
-        if (!commentBody) {
-          throw new Error("Comment body is missing from the event payload.");
+
+        const commentPayload = context.payload.comment as IssueComment | PullRequestReviewComment;
+        if (!commentPayload) {
+          core.info("Comment payload is missing, skipping.");
+          core.setOutput('should_run', 'false');
+          return;
         }
+
+        const commentBody = commentPayload.body;
+        if (!commentBody || !commentBody.includes('@qoder')) {
+          core.info("Comment does not mention @qoder, skipping.");
+          core.setOutput('should_run', 'false');
+          return;
+        }
+
+        const issue = context.payload.issue as Issue;
+        const pr = context.payload.pull_request as PullRequest;
+        const source = pr || issue;
+
+        const mentionContext: MentionContext = {
+          type: pr ? 'pr' : 'issue',
+          source: source,
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+        };
+
+        if (pr) {
+          commentType = 'pull';
+        }
+
+        if ('in_reply_to_id' in commentPayload && commentPayload.in_reply_to_id) {
+          // This is a threaded reply, fetch the thread context
+          const { data: thread } = await octokit.rest.issues.listComments({
+            ...context.repo,
+            issue_number: source.number,
+          });
+          mentionContext.thread = thread.filter(c => c.id === commentPayload.in_reply_to_id || ('in_reply_to_id' in c && c.in_reply_to_id === commentPayload.in_reply_to_id));
+        }
+
+        const runId = context.runId;
+        const checkRunUrl = `${source.html_url}/checks?check_run_id=${runId}`;
+        const welcomeMessage = `<!-- QODER_HEADER_START -->
+👋 Hello! I'm Qoder, your AI code assistant.
+<!-- QODER_HEADER_END -->
+
+---
+
+<!-- QODER_BODY_START -->
+⏳ I'm analyzing your request... I will post my findings shortly.
+<!-- QODER_BODY_END -->
+
+<!-- QODER_FOOTER_START -->
+*You can view the live progress in the [action logs](${checkRunUrl}).*
+<!-- QODER_FOOTER_END -->`;
+
+        if (context.eventName === 'pull_request_review_comment') {
+            const { data: replyComment } = await octokit.rest.pulls.createReplyForReviewComment({
+                ...context.repo,
+                pull_number: pr.number,
+                body: welcomeMessage,
+                comment_id: commentPayload.id
+            });
+            commentId = replyComment.id.toString();
+        } else { // issue_comment
+            const { data: replyComment } = await octokit.rest.issues.createComment({
+                ...context.repo,
+                issue_number: source.number,
+                body: welcomeMessage,
+            });
+            commentId = replyComment.id.toString();
+        }
+        
+        core.info(`Reply comment created with ID: ${commentId}`);
+
         finalSystemPrompt = getMentionSystemPrompt();
-        finalUserPrompt = getMentionUserPrompt(commentBody, core.getInput('append_prompt'));
+        finalUserPrompt = getMentionUserPrompt(mentionContext, commentBody, core.getInput('append_prompt'));
         break;
+      }
 
-      case 'custom':
+      case 'custom': {
+        const pr = context.payload.pull_request;
+        if (!pr) {
+            throw new Error("Action currently only supports pull_request events.");
+        }
+        const runId = context.runId;
+        const checkRunUrl = `${pr.html_url}/checks?check_run_id=${runId}`;
+        const welcomeMessage = `<!-- QODER_HEADER_START -->
+👋 Hello! I'm Qoder, your AI code assistant.
+<!-- QODER_HEADER_END -->
+
+---
+
+<!-- QODER_BODY_START -->
+⏳ I'm analyzing this pull request based on the **custom** scene. I will post my findings shortly.
+<!-- QODER_BODY_END -->
+
+<!-- QODER_FOOTER_START -->
+*You can view the live progress in the [action logs](${checkRunUrl}).*
+<!-- QODER_FOOTER_END -->`;
+
+        const { data: comment } = await octokit.rest.issues.createComment({
+            ...context.repo,
+            issue_number: pr.number,
+            body: welcomeMessage,
+        });
+        commentId = comment.id.toString();
+        core.info(`Initial comment created with ID: ${commentId}`);
+
         const userPrompt = core.getInput('prompt', { required: true });
         finalSystemPrompt = core.getInput('system_prompt') || getDefaultSystemPrompt();
         finalUserPrompt = `### Pull Request Context
@@ -120,10 +222,13 @@ ${pr.body || 'No description provided.'}
 ### User Instruction
 ${userPrompt}`;
         break;
+      }
 
       default:
         throw new Error(`Unknown scene: '${scene}'. Valid scenes are 'cr', 'mention', 'custom'.`);
     }
+
+    core.setOutput('comment_id', commentId);
 
     // 4. Generate MCP Config (preserved from original)
     const mcpConfigTemplate = {
@@ -144,8 +249,8 @@ ${userPrompt}`;
       .replace(/{github_token}/g, githubToken)
       .replace(/{github_owner}/g, context.repo.owner)
       .replace(/{github_repo}/g, context.repo.repo)
-      .replace(/{qoder_comment_id}/g, comment.id.toString())
-      .replace(/{qoder_comment_type}/g, 'issue');
+      .replace(/{qoder_comment_id}/g, commentId)
+      .replace(/{qoder_comment_type}/g, commentType);
 
     core.info(`Rendered config.json: ${configJson}`);
     core.setOutput('qoder_config_json', configJson);

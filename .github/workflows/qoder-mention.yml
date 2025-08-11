@@ -1,0 +1,28 @@
+name: Qoder Mention
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  qoder-mention:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Qoder Action
+        uses: ./ # Uses the local action
+        with:
+          scene: mention
+          dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
+
+          # (Optional) If you have specific review rules, add them here.
+          append_prompt: |
+            请使用中文输出结果。

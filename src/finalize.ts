@@ -11,7 +11,11 @@ function updateSection(originalBody: string, section: 'HEADER' | 'BODY' | 'FOOTE
 
   if (startIndex === -1 || endIndex === -1) {
     core.warning(`Could not find markers for section ${section}.`);
-    return originalBody; // Return original body if markers are not found
+    // If markers are not found, for BODY, we replace the whole content.
+    if (section === 'BODY') {
+      return newContent;
+    }
+    return originalBody; // Return original body if markers are not found for other sections
   }
 
   const before = originalBody.substring(0, startIndex + startMarker.length);
@@ -37,9 +41,11 @@ async function run(): Promise<void> {
     const octokit = github.getOctokit(githubToken);
     const context = github.context;
     const pr = context.payload.pull_request;
+    const issue = context.payload.issue;
 
-    if (!pr) {
-      throw new Error("Finalize step must be run in the context of a pull_request.");
+    const source = pr || issue;
+    if (!source) {
+      throw new Error("Finalize step must be run in the context of a pull_request or issue.");
     }
 
     const { data: existingComment } = await octokit.rest.issues.getComment({
@@ -50,20 +56,18 @@ async function run(): Promise<void> {
 
     let bodyContent: string | null = null;
     let footerContent: string;
-    const checkRunUrl = `${pr.html_url}/checks?check_run_id=${context.runId}`;
+    const checkRunUrl = `${source.html_url}/checks?check_run_id=${context.runId}`;
 
     if (jobStatus === 'failure' || jobStatus === 'cancelled') {
       const status = jobStatus === 'failure' ? 'failed' : 'cancelled';
-      bodyContent = `❌ **The AI task for the 
-${scene}
- scene has ${status}.**\n\nPlease review the [action logs](${checkRunUrl}) for details.`;
+      bodyContent = `❌ **The AI task for the '${scene}' scene has ${status}.**\n\nPlease review the [action logs](${checkRunUrl}) for details.`;
       footerContent = `*Workflow ${status}.*`;
     } else {
       footerContent = `*Workflow finished successfully. You can view the full execution details in the [action logs](${checkRunUrl}).*`;
 
-      if (scene === 'cr') {
+      if (scene === 'cr' && pr) {
         const promptText = [
-          `Based on the following code review for pull request #${pr.number}, please fix the identified issues.`, 
+          `Based on the following code review for pull request #${pr.number}, please fix the identified issues.`,
           `\n**PR Title**: ${pr.title}`,
           '---',
           '**Review Summary**:',
@@ -80,6 +84,11 @@ ${scene}
         const base64Context = Buffer.from(JSON.stringify(fixContext)).toString('base64');
         const fixUrl = `http://localhost:9080/reload-to-qoder?context=${base64Context}`;
         footerContent += `\n\n[✨ One-Click Qoder Fix](${fixUrl})`;
+      }
+
+      // For mention scene, the body is the result itself.
+      if (scene === 'mention') {
+        bodyContent = qoderResult;
       }
     }
 
