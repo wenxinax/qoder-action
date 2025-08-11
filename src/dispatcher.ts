@@ -99,6 +99,8 @@ async function run(): Promise<void> {
       }
 
       case 'mention': {
+        core.info(JSON.stringify(context, null, 2));
+
         const allowedEvents = ['issue_comment', 'pull_request_review_comment'];
         if (!allowedEvents.includes(context.eventName)) {
           throw new Error(`The 'mention' scene only works with '${allowedEvents.join("or ")}' events.`);
@@ -112,7 +114,7 @@ async function run(): Promise<void> {
         }
 
         const commentBody = commentPayload.body;
-        if (!commentBody || !commentBody.includes('@qoder')) {
+        if (!commentBody.includes('@qoder')) {
           core.info("Comment does not mention @qoder, skipping.");
           core.setOutput('should_run', 'false');
           return;
