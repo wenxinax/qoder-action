@@ -1,5 +1,11 @@
 name: Qoder Mention
 
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+  id-token: write
+
 on:
   issue_comment:
     types: [created]
@@ -11,10 +17,28 @@ on:
     types: [submitted]
 
 jobs:
-  qoder-mention:
+  debug:
     runs-on: ubuntu-latest
     steps:
-      - name: Dump GitHub context
+      - name: Dump GitHub event context
         env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
+          GITHUB_EVENT_CONTEXT: ${{ toJson(github.event) }}
+        run: echo "$GITHUB_EVENT_CONTEXT"
+
+  qoder-mention:
+    needs: debug
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@qoder')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@qoder')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@qoder')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@qoder'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Qoder Action
+        uses: ./ # Uses the local action
+        with:
+          scene: mention
+          dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
