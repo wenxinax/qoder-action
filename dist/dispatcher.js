@@ -30131,6 +30131,7 @@ async function run() {
                 core.info(`Reply comment created with ID: ${commentId}`);
                 finalSystemPrompt = (0, mention_1.getMentionSystemPrompt)();
                 finalUserPrompt = (0, mention_1.getMentionUserPrompt)(mentionContext, commentBody, core.getInput('append_prompt'));
+                core.setOutput('comment_type', commentType);
                 break;
             }
             case 'custom': {

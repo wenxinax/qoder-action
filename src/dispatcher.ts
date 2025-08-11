@@ -200,6 +200,7 @@ async function run(): Promise<void> {
 
         finalSystemPrompt = getMentionSystemPrompt();
         finalUserPrompt = getMentionUserPrompt(mentionContext, commentBody, core.getInput('append_prompt'));
+        core.setOutput('comment_type', commentType);
         break;
       }
 
