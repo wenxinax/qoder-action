@@ -12,7 +12,16 @@ on:
     types: [submitted]
 
 jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+
   qoder-mention:
+    needs: debug
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@qoder')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@qoder')) ||
