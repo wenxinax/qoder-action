@@ -159,7 +159,7 @@ async function run(): Promise<void> {
             const reviewComment = commentPayload as PullRequestReviewComment;
             if (reviewComment.in_reply_to_id) {
                 core.info(`正在处理回复评论，in_reply_to_id: ${reviewComment.in_reply_to_id}`);
-                const { data: allReviewComments } = await octokit.rest.pulls.listReviewComments({
+                const allReviewComments = await octokit.paginate(octokit.rest.pulls.listReviewComments, {
                     ...context.repo,
                     pull_number: pr.number,
                 });
