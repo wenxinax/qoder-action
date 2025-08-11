@@ -48,11 +48,23 @@ async function run(): Promise<void> {
       throw new Error("Finalize step must be run in the context of a pull_request or issue.");
     }
 
-    const { data: existingComment } = await octokit.rest.issues.getComment({
-      ...context.repo,
-      comment_id: commentId,
-    });
-    let currentBody = existingComment.body || '';
+    const commentType = core.getInput('comment_type');
+
+    let currentBody: string;
+
+    if (commentType === 'review') {
+      const { data: existingComment } = await octokit.rest.pulls.getReviewComment({
+        ...context.repo,
+        comment_id: commentId,
+      });
+      currentBody = existingComment.body || '';
+    } else {
+      const { data: existingComment } = await octokit.rest.issues.getComment({
+        ...context.repo,
+        comment_id: commentId,
+      });
+      currentBody = existingComment.body || '';
+    }
 
     let bodyContent: string | null = null;
     let footerContent: string;
@@ -97,11 +109,19 @@ async function run(): Promise<void> {
     }
     currentBody = updateSection(currentBody, 'FOOTER', footerContent);
 
-    await octokit.rest.issues.updateComment({
-      ...context.repo,
-      comment_id: commentId,
-      body: currentBody,
-    });
+    if (commentType === 'review') {
+      await octokit.rest.pulls.updateReviewComment({
+        ...context.repo,
+        comment_id: commentId,
+        body: currentBody,
+      });
+    } else {
+      await octokit.rest.issues.updateComment({
+        ...context.repo,
+        comment_id: commentId,
+        body: currentBody,
+      });
+    }
 
     core.info("Comment updated successfully.");
 

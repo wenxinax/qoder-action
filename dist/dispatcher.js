@@ -30199,6 +30199,7 @@ ${userPrompt}`;
         core.debug(`Prompt content (first 200 chars): ${finalUserPrompt.substring(0, 200)}...`);
         core.setOutput('prompt_path', userPromptFilePath);
         core.setOutput('should_run', 'true');
+        core.setOutput('comment_type', commentType);
     }
     catch (error) {
         if (error instanceof Error) {

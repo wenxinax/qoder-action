@@ -30001,11 +30001,22 @@ async function run() {
         if (!source) {
             throw new Error("Finalize step must be run in the context of a pull_request or issue.");
         }
-        const { data: existingComment } = await octokit.rest.issues.getComment({
-            ...context.repo,
-            comment_id: commentId,
-        });
-        let currentBody = existingComment.body || '';
+        const commentType = core.getInput('comment_type');
+        let currentBody;
+        if (commentType === 'review') {
+            const { data: existingComment } = await octokit.rest.pulls.getReviewComment({
+                ...context.repo,
+                comment_id: commentId,
+            });
+            currentBody = existingComment.body || '';
+        }
+        else {
+            const { data: existingComment } = await octokit.rest.issues.getComment({
+                ...context.repo,
+                comment_id: commentId,
+            });
+            currentBody = existingComment.body || '';
+        }
         let bodyContent = null;
         let footerContent;
         const checkRunUrl = `${source.html_url}/checks?check_run_id=${context.runId}`;
@@ -30043,11 +30054,20 @@ async function run() {
             currentBody = updateSection(currentBody, 'BODY', bodyContent);
         }
         currentBody = updateSection(currentBody, 'FOOTER', footerContent);
-        await octokit.rest.issues.updateComment({
-            ...context.repo,
-            comment_id: commentId,
-            body: currentBody,
-        });
+        if (commentType === 'review') {
+            await octokit.rest.pulls.updateReviewComment({
+                ...context.repo,
+                comment_id: commentId,
+                body: currentBody,
+            });
+        }
+        else {
+            await octokit.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: commentId,
+                body: currentBody,
+            });
+        }
         core.info("Comment updated successfully.");
     }
     catch (error) {
