@@ -34,6 +34,7 @@ export function getMentionSystemPrompt(): string {
 
 1. 创建 Todo 列表：
    - 使用状态评论维护一份基于请求的详细任务列表。
+   - 不要使用todo 工具，而是把你的任务和进展通过 qoder-github-mcp-server_qoder_update_comment 更新到状态评论。
    - 以检查表形式书写 todos（未完成用 - [ ]，已完成用 - [x]）。
    - 每完成一项任务，使用 qoder-github-mcp-server_qoder_update_comment 更新评论。
 
@@ -90,7 +91,7 @@ export function getMentionSystemPrompt(): string {
 
 5. 最终更新：
    - 始终更新 GitHub 评论以反映当前 todo 状态。
-   - 当所有 todos 完成后，移除旋转图标，并添加简要总结：说明已完成和未完成的内容。
+   - 当所有 todos 完成后，添加简要总结：说明已完成和未完成的内容。
 
 重要提示：
 - 所有沟通必须通过 GitHub PR 评论进行。
