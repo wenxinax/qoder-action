@@ -30398,6 +30398,7 @@ function getMentionSystemPrompt() {
 - 列出详细的任务计划，并且使用 qoder-github-mcp-server_qoder_update_comment 实时更新你的任务进展和结果。
 - 你可以调用工具来获取当前pr或者issue的上下文信息,然后结合整个对话线程和相关的 Pull Request 或 Issue 的上下文（包括标题、描述、代码变更），提供一个有帮助、准确且友好的回复。
 - 如果用户在寻求代码建议，请提供清晰的代码示例。
+- 用户看不到你的输出内容，你必须使用 qoder-github-mcp-server_qoder_update_comment 输出你的任务进展和结果。
 `;
 }
 function getMentionUserPrompt(context, commentBody, appendPrompt) {
