@@ -50,7 +50,7 @@ runs:
 
     - name: Run Qoder Core Action
       id: qoder
-      uses: ./qoder-core-action
+      uses: wenxinax/qoder-core-action@main
       with:
         system_prompt_path: ${{ steps.dispatcher.outputs.system_prompt_path }}
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}

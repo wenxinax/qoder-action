@@ -22,7 +22,5 @@ jobs:
           dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
 
           # (Optional) If you have specific review rules, add them here.
-          # append_prompt: |
-          #   Please pay special attention to:
-          #   1. Concurrency safety issues in Go.
-          #   2. SQL injection vulnerabilities.
+          append_prompt: |
+            请使用中文输出结果。
