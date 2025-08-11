@@ -154,23 +154,20 @@ async function run(): Promise<void> {
             }
         }
 
-        if ('in_reply_to_id' in commentPayload && commentPayload.in_reply_to_id) {
-          const allComments = pr
-            ? (await octokit.rest.pulls.listReviewComments({ ...context.repo, pull_number: pr.number })).data
-            : (await octokit.rest.issues.listComments({ ...context.repo, issue_number: issue.number })).data;
+        if (context.eventName === 'pull_request_review_comment') {
+            const reviewComment = commentPayload as PullRequestReviewComment;
+            if (reviewComment.in_reply_to_id) {
+                const { data: allReviewComments } = await octokit.rest.pulls.listReviewComments({
+                    ...context.repo,
+                    pull_number: pr.number,
+                });
 
-          const buildThread = (commentId: number) => {
-            const thread: (IssueComment | PullRequestReviewComment)[] = [];
-            let currentComment: any = allComments.find(c => c.id === commentId);
-            while (currentComment) {
-              thread.unshift(currentComment);
-              const parentId = currentComment.in_reply_to_id;
-              currentComment = parentId ? allComments.find(c => c.id === parentId) : undefined;
+                const topLevelComment = allReviewComments.find(c => c.id === reviewComment.in_reply_to_id);
+                if (topLevelComment) {
+                    const thread = [topLevelComment, ...allReviewComments.filter(c => c.in_reply_to_id === reviewComment.in_reply_to_id)];
+                    mentionContext.thread = thread;
+                }
             }
-            return thread;
-          };
-
-          mentionContext.thread = buildThread(commentPayload.id);
         }
 
         const runId = context.runId;

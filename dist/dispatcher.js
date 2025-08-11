@@ -30088,21 +30088,19 @@ async function run() {
                         };
                     }
                 }
-                if ('in_reply_to_id' in commentPayload && commentPayload.in_reply_to_id) {
-                    const allComments = pr
-                        ? (await octokit.rest.pulls.listReviewComments({ ...context.repo, pull_number: pr.number })).data
-                        : (await octokit.rest.issues.listComments({ ...context.repo, issue_number: issue.number })).data;
-                    const buildThread = (commentId) => {
-                        const thread = [];
-                        let currentComment = allComments.find(c => c.id === commentId);
-                        while (currentComment) {
-                            thread.unshift(currentComment);
-                            const parentId = currentComment.in_reply_to_id;
-                            currentComment = parentId ? allComments.find(c => c.id === parentId) : undefined;
+                if (context.eventName === 'pull_request_review_comment') {
+                    const reviewComment = commentPayload;
+                    if (reviewComment.in_reply_to_id) {
+                        const { data: allReviewComments } = await octokit.rest.pulls.listReviewComments({
+                            ...context.repo,
+                            pull_number: pr.number,
+                        });
+                        const topLevelComment = allReviewComments.find(c => c.id === reviewComment.in_reply_to_id);
+                        if (topLevelComment) {
+                            const thread = [topLevelComment, ...allReviewComments.filter(c => c.in_reply_to_id === reviewComment.in_reply_to_id)];
+                            mentionContext.thread = thread;
                         }
-                        return thread;
-                    };
-                    mentionContext.thread = buildThread(commentPayload.id);
+                    }
                 }
                 const runId = context.runId;
                 const checkRunUrl = `${source.html_url}/checks?check_run_id=${runId}`;
