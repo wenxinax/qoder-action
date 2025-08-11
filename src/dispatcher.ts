@@ -60,7 +60,7 @@ async function run(): Promise<void> {
     let finalSystemPrompt: string;
     let finalUserPrompt: string;
     let commentId: string;
-    let commentType: 'issue' | 'pull' = 'issue';
+    let commentType: 'issue' | 'review' = 'issue';
 
     // 3. Scene-based Logic
     core.info(`Processing scene: ${scene}`);
@@ -132,7 +132,7 @@ async function run(): Promise<void> {
         };
 
         if (pr) {
-          commentType = 'pull';
+          commentType = 'review';
         }
 
         if ('in_reply_to_id' in commentPayload && commentPayload.in_reply_to_id) {

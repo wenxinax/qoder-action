@@ -30069,7 +30069,7 @@ async function run() {
                     repo: context.repo.repo,
                 };
                 if (pr) {
-                    commentType = 'pull';
+                    commentType = 'review';
                 }
                 if ('in_reply_to_id' in commentPayload && commentPayload.in_reply_to_id) {
                     // This is a threaded reply, fetch the thread context
