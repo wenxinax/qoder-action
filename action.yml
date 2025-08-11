@@ -1,4 +1,3 @@
-# action.yml
 
 name: 'Qoder Action'
 description: 'A flexible and composable GitHub Action framework for qoder-cli.'
@@ -39,13 +38,15 @@ runs:
   steps:
     - name: Dispatcher
       id: dispatcher
-      uses: ./
-      with:
-        scene: ${{ inputs.scene }}
-        append_prompt: ${{ inputs.append_prompt }}
-        prompt: ${{ inputs.prompt }}
-        system_prompt: ${{ inputs.system_prompt }}
-        github_token: ${{ inputs.github_token }}
+      # Execute the compiled dispatcher script directly instead of calling the action recursively
+      run: node ${{ github.action_path }}/dist/dispatcher.js
+      shell: bash
+      env:
+        INPUT_SCENE: ${{ inputs.scene }}
+        INPUT_APPEND_PROMPT: ${{ inputs.append_prompt }}
+        INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
 
     - name: Run Qoder Core Action
       id: qoder
@@ -58,11 +59,14 @@ runs:
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
 
     - name: Finalize
+      id: finalize
       if: always()
-      uses: ./
-      with:
-        scene: ${{ inputs.scene }}
-        comment_id: ${{ steps.dispatcher.outputs.comment_id }}
-        job_status: ${{ job.status }}
-        qoder_result: ${{ steps.qoder.outputs.result }}
-        github_token: ${{ inputs.github_token }}
+      # Execute the compiled finalize script directly
+      run: node ${{ github.action_path }}/dist/finalize.js
+      shell: bash
+      env:
+        INPUT_SCENE: ${{ inputs.scene }}
+        INPUT_COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
+        INPUT_JOB_STATUS: ${{ job.status }}
+        INPUT_QODER_RESULT: ${{ steps.qoder.outputs.result }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
