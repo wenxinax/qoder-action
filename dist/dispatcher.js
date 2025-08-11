@@ -30097,7 +30097,7 @@ ${userPrompt}`;
         fs.writeFileSync(userPromptFilePath, finalUserPrompt);
         core.info(`Final user prompt written to ${userPromptFilePath}.`);
         core.debug(`Prompt content (first 200 chars): ${finalUserPrompt.substring(0, 200)}...`);
-        core.setOutput('prompt_file_path', userPromptFilePath);
+        core.setOutput('prompt_path', userPromptFilePath);
         core.setOutput('should_run', 'true');
     }
     catch (error) {
@@ -30245,7 +30245,7 @@ function getCrUserPrompt(pr, appendPrompt) {
 ${pr.body || 'No description provided.'}
 
 ### User Instruction
-${appendPrompt || 'Please perform a code review based on the system prompt.'}`;
+${appendPrompt || 'No user instruction provided.'}`;
 }
 
 
