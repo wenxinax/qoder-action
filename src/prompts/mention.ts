@@ -12,7 +12,7 @@ export type MentionContext = {
     path: string;
     diff_hunk: string;
     start_line?: number;
-    line: number | null;
+    line: number;
   };
 };
 
