@@ -142,6 +142,16 @@ async function run(): Promise<void> {
           commentType = 'review';
         }
 
+        if (context.eventName === 'pull_request_review_comment') {
+            const reviewComment = commentPayload as PullRequestReviewComment;
+            mentionContext.code_context = {
+                path: reviewComment.path,
+                diff_hunk: reviewComment.diff_hunk,
+                start_line: reviewComment.start_line ?? undefined,
+                line: reviewComment.line ?? 0,
+            };
+        }
+
         if ('in_reply_to_id' in commentPayload && commentPayload.in_reply_to_id) {
           // This is a threaded reply, fetch the thread context
           const { data: thread } = await octokit.rest.issues.listComments({
@@ -277,7 +287,6 @@ ${userPrompt}`;
 
     core.setOutput('prompt_path', userPromptFilePath);
     core.setOutput('should_run', 'true');
-    core.setOutput('comment_type', commentType);
 
   } catch (error) {
     if (error instanceof Error) {

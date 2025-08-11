@@ -7,7 +7,13 @@ export type MentionContext = {
   owner: string;
   repo: string;
   // The full comment thread, if the mention was in a reply.
-  thread?: any[]; 
+  thread?: any[];
+  code_context?: {
+    path: string;
+    diff_hunk: string;
+    start_line?: number;
+    line: number | null;
+  };
 };
 
 export function getMentionSystemPrompt(): string {
@@ -57,11 +63,24 @@ ${context.thread.map(c => `- @${c.user.login}: ${c.body}`).join('\n')}
 `
     : '';
 
+  const codeContextDetails = context.code_context
+    ? `
+### 代码上下文
+- **文件**: ${context.code_context.path}
+- **行号**: ${context.code_context.start_line ? `${context.code_context.start_line}-` : ''}${context.code_context.line}
+- **代码片段**:
+` + '```diff' + `
+${context.code_context.diff_hunk}
+` + '```' + `
+`
+    : '';
+
   const userInstruction = `
 有用户在一个 ${context.type === 'pr' ? 'Pull Request' : 'Issue'} 的评论中提及了你。
 
 以下是相关的上下文信息：
 ${contextDetails}
+${codeContextDetails}
 ${threadDetails}
 
 ### 用户最新评论

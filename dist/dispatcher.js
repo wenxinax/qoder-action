@@ -30077,6 +30077,15 @@ async function run() {
                 if (pr) {
                     commentType = 'review';
                 }
+                if (context.eventName === 'pull_request_review_comment') {
+                    const reviewComment = commentPayload;
+                    mentionContext.code_context = {
+                        path: reviewComment.path,
+                        diff_hunk: reviewComment.diff_hunk,
+                        start_line: reviewComment.start_line ?? undefined,
+                        line: reviewComment.line ?? 0,
+                    };
+                }
                 if ('in_reply_to_id' in commentPayload && commentPayload.in_reply_to_id) {
                     // This is a threaded reply, fetch the thread context
                     const { data: thread } = await octokit.rest.issues.listComments({
@@ -30199,7 +30208,6 @@ ${userPrompt}`;
         core.debug(`Prompt content (first 200 chars): ${finalUserPrompt.substring(0, 200)}...`);
         core.setOutput('prompt_path', userPromptFilePath);
         core.setOutput('should_run', 'true');
-        core.setOutput('comment_type', commentType);
     }
     catch (error) {
         if (error instanceof Error) {
@@ -30415,11 +30423,23 @@ ${context.source.body || 'No description provided.'}
 ${context.thread.map(c => `- @${c.user.login}: ${c.body}`).join('\n')}
 `
         : '';
+    const codeContextDetails = context.code_context
+        ? `
+### 代码上下文
+- **文件**: ${context.code_context.path}
+- **行号**: ${context.code_context.start_line ? `${context.code_context.start_line}-` : ''}${context.code_context.line}
+- **代码片段**:
+` + '```diff' + `
+${context.code_context.diff_hunk}
+` + '```' + `
+`
+        : '';
     const userInstruction = `
 有用户在一个 ${context.type === 'pr' ? 'Pull Request' : 'Issue'} 的评论中提及了你。
 
 以下是相关的上下文信息：
 ${contextDetails}
+${codeContextDetails}
 ${threadDetails}
 
 ### 用户最新评论
