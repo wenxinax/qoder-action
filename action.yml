@@ -68,5 +68,5 @@ runs:
         INPUT_COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
         INPUT_JOB_STATUS: ${{ job.status }}
         INPUT_QODER_RESULT: ${{ steps.qoder.outputs.result }}
-        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_GITHUB_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
         INPUT_COMMENT_TYPE: ${{ steps.dispatcher.outputs.comment_type }}
