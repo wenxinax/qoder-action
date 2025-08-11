@@ -30089,17 +30089,30 @@ async function run() {
                     }
                 }
                 if (context.eventName === 'pull_request_review_comment') {
+                    core.info('进入 pull_request_review_comment 逻辑分支');
                     const reviewComment = commentPayload;
                     if (reviewComment.in_reply_to_id) {
+                        core.info(`正在处理回复评论，in_reply_to_id: ${reviewComment.in_reply_to_id}`);
                         const { data: allReviewComments } = await octokit.rest.pulls.listReviewComments({
                             ...context.repo,
                             pull_number: pr.number,
                         });
+                        core.info(`获取到 ${allReviewComments.length} 条评审评论`);
+                        core.debug(`所有评审评论内容: ${JSON.stringify(allReviewComments, null, 2)}`);
                         const topLevelComment = allReviewComments.find(c => c.id === reviewComment.in_reply_to_id);
                         if (topLevelComment) {
+                            core.info(`找到顶层评论: ${topLevelComment.id}`);
                             const thread = [topLevelComment, ...allReviewComments.filter(c => c.in_reply_to_id === reviewComment.in_reply_to_id)];
                             mentionContext.thread = thread;
+                            core.info(`构建出的对话线程包含 ${thread.length} 条评论`);
+                            core.debug(`构建的线程内容: ${JSON.stringify(thread, null, 2)}`);
                         }
+                        else {
+                            core.warning('没有找到顶层评论');
+                        }
+                    }
+                    else {
+                        core.info('评论不是一个回复，不构建对话线程');
                     }
                 }
                 const runId = context.runId;
@@ -30137,6 +30150,9 @@ async function run() {
                 core.info(`Reply comment created with ID: ${commentId}`);
                 finalSystemPrompt = (0, mention_1.getMentionSystemPrompt)();
                 finalUserPrompt = (0, mention_1.getMentionUserPrompt)(mentionContext, commentBody, core.getInput('append_prompt'));
+                core.info('--- 生成的最终用户 Prompt ---');
+                core.info(finalUserPrompt);
+                core.info('--------------------------');
                 core.setOutput('comment_type', commentType);
                 break;
             }
