@@ -48,6 +48,10 @@ runs:
         INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
 
+    - name: Debug Dispatcher Outputs
+      run: echo "Dispatcher github_token is ${{ steps.dispatcher.outputs.github_token }}"
+      shell: bash
+
     - name: Run Qoder Core Action
       id: qoder
       uses: wenxinax/qoder-core-action@main
