@@ -12,7 +12,6 @@ on:
 
 jobs:
   qoder-mention:
-    needs: debug
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@qoder')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@qoder')) ||
