@@ -29999,6 +29999,8 @@ async function run() {
         // 1. Get Inputs and Initialize
         const scene = core.getInput('scene', { required: true });
         const githubToken = await getGithubToken();
+        core.info(`Dispatcher: OIDC Token received. Length: ${githubToken.length}.`);
+        core.info(`Dispatcher: Token preview: ${githubToken.substring(0, 8)}...${githubToken.substring(githubToken.length - 8)}`);
         core.setOutput('oidc_token', githubToken);
         core.setSecret(githubToken);
         const octokit = github.getOctokit(githubToken);
