@@ -42,8 +42,9 @@ runs:
         INPUT_APPEND_PROMPT: ${{ inputs.append_prompt }}
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
-        
+
     - name: Set github url and credentials
+      shell: bash
       run: |
           git config --global credential.helper store
           echo "https://x-access-token:${{ steps.dispatcher.outputs.github_token }}@github.com" > ~/.git-credentials
