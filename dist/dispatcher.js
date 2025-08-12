@@ -30466,8 +30466,9 @@ function getMentionSystemPrompt() {
       - 阅读文件并分析代码后，必须调用 qoder-github-mcp-server_qoder_update_comment 发布评审
 
    B. 简单修改：
-      - 请使用 github 相关工具创建新的分支，使用文件系统工具在本地进行修改，然后 github 相关工具推送到远端。按照用户需求决定是否创建 PR。
+      - 请使用 github 相关工具创建新的分支，使用 github 相关工具推送到远端。按照用户需求决定是否创建 PR。
       - 在任何时候修改都需要基于当前 feature 分支创建新分支，并且把 commit 或者 PR 链接引用更新在状态评论。
+      - 请使用 github_create_branch 工具创建新分支，使用 github_create_or_update_file 修改文件，使用 github_push_files 推送代码，使用 github_create_pull_request 创建 PR。
       - 若发现相关任务（如更新测试），将其加入 todo 列表。
       - 任务推进时逐项标记完成。
       - 以如下格式提供手动创建 PR 的链接：
