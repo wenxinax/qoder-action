@@ -42,37 +42,6 @@ runs:
         INPUT_APPEND_PROMPT: ${{ inputs.append_prompt }}
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
-            
-    - name: Verify that git uses *our* token
-      env:
-        MY_TOKEN: ${{ steps.dispatcher.outputs.github_token }}  
-      shell: bash
-      run: |
-        set -e
-
-        # ① 取出 insteadOf 那一行
-        line=$(git config --global --get-regexp \
-              '^url\.https://x-access-token.*@github\.com/\.insteadOf$' \
-              || true)
-
-        if [ -z "$line" ]; then
-          echo "❌ 没找到 insteadOf 规则"; exit 1
-        fi
-
-        current_token=$(echo "$line" | sed -E \
-          's|.*x-access-token:([^@]*)@github\.com/\.insteadOf.*|\1|')
-
-        if [ -z "$current_token" ]; then
-          echo "❌ 无法解析出 token"; exit 1
-        fi
-
-        # ② 比对前 10 位
-        if [[ "${current_token:0:10}" == "${MY_TOKEN:0:10}" ]]; then
-          echo "✅ git 使用的确实是我们的 Token"
-        else
-          echo "❌ git 用的不是我们想要的 Token"; exit 1
-        fi
-
 
     - name: Run Qoder Core Action
       id: qoder
@@ -82,7 +51,6 @@ runs:
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
         config: ${{ steps.dispatcher.outputs.qoder_config_json }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
-        github_token: ${{ steps.dispatcher.outputs.github_token }}
 
     - name: Finalize
       id: finalize
