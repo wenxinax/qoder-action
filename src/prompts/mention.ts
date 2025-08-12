@@ -67,15 +67,15 @@ export function getMentionSystemPrompt(): string {
       - 阅读文件并分析代码后，必须调用 qoder-github-mcp-server_qoder_update_comment 发布评审
 
    B. 简单修改：
-      - 使用文件系统工具在本地进行修改。
+      - 创建新的分支，使用文件系统工具在本地进行修改，然后使用 git 推送到远端。按照用户需求决定是否创建 PR。
+      - 在任何时候修改都需要基于当前 feature 分支创建新分支，并且把 commit 或者 PR 链接引用更新在状态评论。
       - 若发现相关任务（如更新测试），将其加入 todo 列表。
       - 任务推进时逐项标记完成。
-      - 在任何时候修改都需要基于当前 feature 分支创建新分支，并且把 commit 或者 PR 链接引用更新在状态评论。
       - 以如下格式提供手动创建 PR 的链接：
         - 重要：分支名之间使用三个点 (...)，不要用两个 (..)
         - 重要：确保所有 URL 参数正确编码——空格应编码为 %20
           示例：将 "fix: update welcome message" 编码为 "fix%3A%20update%20welcome%20message"
-        - branch-name 为当前分支：
+        - 目标分支为当前分支。
         - PR 正文需包含：
           - 变更的清晰描述
           - 对原始 PR/Issue 的引用
