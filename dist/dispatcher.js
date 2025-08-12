@@ -29968,8 +29968,9 @@ const http_client_1 = __nccwpck_require__(4451);
 const cr_1 = __nccwpck_require__(8241);
 const mention_1 = __nccwpck_require__(9084);
 const custom_1 = __nccwpck_require__(6487);
+// execSync is already here, which is great.
 const { execSync } = __nccwpck_require__(5317);
-// This function is preserved from the original file to handle authentication.
+// This function is preserved from your original file to handle authentication.
 async function getGithubToken() {
     core.info('Requesting OIDC token...');
     const agentUrl = 'http://dev.lingma-agents-api.aliyuncs.com';
@@ -30001,12 +30002,47 @@ async function run() {
         const githubToken = await getGithubToken();
         core.setOutput('github_token', githubToken);
         core.setSecret(githubToken);
-        execSync(`git config --global ` +
-            `url."https://x-access-token:${githubToken}@github.com/".insteadOf ` +
-            `"https://github.com/"`, { stdio: 'ignore' } // 避免在日志里回显命令
-        );
         const octokit = github.getOctokit(githubToken);
         const context = github.context;
+        // --- MODIFICATION START ---
+        // The 'insteadOf' config is removed and replaced with a more direct approach.
+        core.info('=== Git Directory Debug Info (BEFORE) ===');
+        try {
+            const currentDir = execSync('pwd', { encoding: 'utf8' }).trim();
+            core.info(`Current directory: ${currentDir}`);
+            const gitRemote = execSync('git remote -v', { encoding: 'utf8' }).trim();
+            core.info(`Current git remotes:\n${gitRemote}`);
+            const isGitRepo = execSync('git rev-parse --is-inside-work-tree', { encoding: 'utf8' }).trim();
+            core.info(`Is git repo: ${isGitRepo}`);
+        }
+        catch (error) {
+            core.warning(`Pre-config debug info failed: ${error}`);
+        }
+        core.info('Setting up git identity with GitHub App credentials...');
+        // Construct the new remote URL with the app token
+        const repoUrl = `https://x-access-token:${githubToken}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
+        // It's best practice to set the committer's identity to the app's identity.
+        // You can find your app's name and ID to form the email.
+        const appName = 'qoder-app[bot]'; // Replace with your app's name if you wish
+        const appEmail = 'qoder-app[bot]@users.noreply.github.com'; // Replace with your app's ID
+        // Forcefully update the remote URL and set the user config for the repository
+        try {
+            execSync(`git remote set-url origin ${repoUrl}`, { stdio: 'pipe' });
+            execSync(`git config user.name "${appName}"`, { stdio: 'pipe' });
+            execSync(`git config user.email "${appEmail}"`, { stdio: 'pipe' });
+            core.info(`Git remote URL updated and user configured as ${appName}.`);
+            // Verify the changes
+            core.info('=== Git Directory Debug Info (AFTER) ===');
+            const newGitRemote = execSync('git remote -v', { encoding: 'utf8' }).trim();
+            core.info(`Updated git remotes:\n${newGitRemote}`);
+            const gitUserName = execSync('git config user.name', { encoding: 'utf8' }).trim();
+            const gitUserEmail = execSync('git config user.email', { encoding: 'utf8' }).trim();
+            core.info(`Git user configured as: ${gitUserName} <${gitUserEmail}>`);
+        }
+        catch (error) {
+            core.warning(`Failed to configure git: ${error}`);
+        }
+        // --- MODIFICATION END ---
         let finalSystemPrompt;
         let finalUserPrompt;
         let commentId;
