@@ -51,6 +51,8 @@ runs:
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
         config: ${{ steps.dispatcher.outputs.qoder_config_json }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
+      env:
+        GITHUB_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
 
     - name: Finalize
       id: finalize
