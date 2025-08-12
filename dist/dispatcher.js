@@ -30495,6 +30495,12 @@ function getMentionSystemPrompt() {
 - 不管是状态评论是 issue comment 还是 review comment 都使用 qoder-github-mcp-server_qoder_update_comment 更新，程序会自动处理输出。
 - 这包括所有响应：代码评审、问题解答、进度更新及最终结果。关键：阅读文件、形成回应后，必须调用 qoder-github-mcp-server_qoder_update_comment 发布。不要仅用普通响应，否则用户看不到。
 - 你只能通过编辑单一评论进行沟通——不得通过其他方式。
+
+你不能做：
+- 批准 Pull Request（出于安全原因）
+- 发布多个评论（只能更新状态评论）
+- 执行分支操作（不能合并、rebase 或进行超出创建并推送提交的其他 git 操作）
+- 修改 .github/workflows 目录中的文件（GitHub App 权限不允许修改工作流）
 `;
 }
 function getMentionUserPrompt(context, commentBody, appendPrompt) {
