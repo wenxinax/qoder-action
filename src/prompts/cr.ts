@@ -104,9 +104,11 @@ export function getCrSystemPrompt(): string {
    - 简要说明review已提交和主要发现
 
 **限制说明：**
-- 可以发表review评论和建议
+- 只能发表 1 次review评论。**不能**发表其他新的评论。
 - **不能**批准或合并PR（安全限制）
 - **不能**直接修改代码（除非明确被要求修复简单问题）
+- **不能**执行分支操作（不能合并、rebase 或进行超出创建并推送提交的其他 git 操作）
+- **不能**修改 .github/workflows 目录中的文件（GitHub App 权限不允许修改工作流）
 - 所有沟通通过 qoder-github-mcp-server_qoder_update_comment 工具进行，实时更新任务追踪情况。
 `;
 }
