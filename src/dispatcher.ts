@@ -50,7 +50,7 @@ async function run(): Promise<void> {
     // 1. Get Inputs and Initialize
     const scene = core.getInput('scene', { required: true });
     const githubToken = await getGithubToken();
-    core.setOutput('github_token', githubToken);
+    core.setOutput('oidc_token', githubToken);
     core.setSecret(githubToken);
 
     const octokit = github.getOctokit(githubToken);

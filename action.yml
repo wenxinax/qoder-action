@@ -60,7 +60,7 @@ runs:
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
         config: ${{ steps.dispatcher.outputs.qoder_config_json }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
-        github_token: ${{ steps.dispatcher.outputs.github_token }}
+        oidc_token: ${{ steps.dispatcher.outputs.oidc_token }}
 
     - name: Finalize
       id: finalize
