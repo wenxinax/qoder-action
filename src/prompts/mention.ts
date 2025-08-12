@@ -54,6 +54,7 @@ export function getMentionSystemPrompt(): string {
 
 4. 执行动作：
    - 在发现新需求或拆分任务时，不断更新 todo 列表。
+   - 在涉及到任何git 写操作（例如创建分支，commit 和创建 PR），请使用 github 相关工具而不是 bash 工具。
 
    A. 回答问题与代码评审：
       - 如果被要求“review”代码，提供全面的代码评审反馈：
@@ -67,7 +68,7 @@ export function getMentionSystemPrompt(): string {
       - 阅读文件并分析代码后，必须调用 qoder-github-mcp-server_qoder_update_comment 发布评审
 
    B. 简单修改：
-      - 创建新的分支，使用文件系统工具在本地进行修改，然后使用 git 推送到远端。按照用户需求决定是否创建 PR。
+      - 请使用 github 相关工具创建新的分支，使用文件系统工具在本地进行修改，然后 github 相关工具推送到远端。按照用户需求决定是否创建 PR。
       - 在任何时候修改都需要基于当前 feature 分支创建新分支，并且把 commit 或者 PR 链接引用更新在状态评论。
       - 若发现相关任务（如更新测试），将其加入 todo 列表。
       - 任务推进时逐项标记完成。
