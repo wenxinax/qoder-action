@@ -30014,6 +30014,18 @@ async function run() {
             core.info(`Current git remotes:\n${gitRemote}`);
             const isGitRepo = execSync('git rev-parse --is-inside-work-tree', { encoding: 'utf8' }).trim();
             core.info(`Is git repo: ${isGitRepo}`);
+            // Check environment variables that might interfere
+            core.info(`GITHUB_TOKEN env var exists: ${process.env.GITHUB_TOKEN ? 'Yes (hidden)' : 'No'}`);
+            core.info(`GITHUB_ACTOR env var: ${process.env.GITHUB_ACTOR || 'Not set'}`);
+            // Check current git config
+            try {
+                const currentUserName = execSync('git config user.name', { encoding: 'utf8' }).trim();
+                const currentUserEmail = execSync('git config user.email', { encoding: 'utf8' }).trim();
+                core.info(`Current git user: ${currentUserName} <${currentUserEmail}>`);
+            }
+            catch (e) {
+                core.info('No git user configured yet');
+            }
         }
         catch (error) {
             core.warning(`Pre-config debug info failed: ${error}`);
@@ -30027,9 +30039,14 @@ async function run() {
         const appEmail = 'qoder-app[bot]@users.noreply.github.com'; // Replace with your app's ID
         // Forcefully update the remote URL and set the user config for the repository
         try {
+            // Clear any existing credential helpers that might interfere
+            execSync('git config --unset-all credential.helper', { stdio: 'pipe' }).catch(() => { });
             execSync(`git remote set-url origin ${repoUrl}`, { stdio: 'pipe' });
             execSync(`git config user.name "${appName}"`, { stdio: 'pipe' });
             execSync(`git config user.email "${appEmail}"`, { stdio: 'pipe' });
+            // Also set global git config to ensure consistency
+            execSync(`git config --global user.name "${appName}"`, { stdio: 'pipe' });
+            execSync(`git config --global user.email "${appEmail}"`, { stdio: 'pipe' });
             core.info(`Git remote URL updated and user configured as ${appName}.`);
             // Verify the changes
             core.info('=== Git Directory Debug Info (AFTER) ===');
