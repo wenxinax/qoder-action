@@ -29968,13 +29968,13 @@ const http_client_1 = __nccwpck_require__(4451);
 const cr_1 = __nccwpck_require__(8241);
 const mention_1 = __nccwpck_require__(9084);
 const custom_1 = __nccwpck_require__(6487);
+const { execSync } = __nccwpck_require__(5317);
 // This function is preserved from the original file to handle authentication.
 async function getGithubToken() {
     core.info('Requesting OIDC token...');
     const agentUrl = 'http://dev.lingma-agents-api.aliyuncs.com';
     const oidcToken = await core.getIDToken();
     core.info(`Successfully retrieved OIDC token (length: ${oidcToken.length}).`);
-    core.info(`OIDC Token (first 30 chars): ${oidcToken.substring(0, 30)}...`);
     const exchangeUrl = `${agentUrl}/v1/github/oidc/token`;
     core.info(`Exchanging OIDC token at: ${exchangeUrl}`);
     const httpClient = new http_client_1.HttpClient('qoder-action');
@@ -29992,7 +29992,6 @@ async function getGithubToken() {
         throw new Error('`installation_token` not found in response.');
     }
     core.info('Successfully exchanged OIDC token for github_token.');
-    core.info(`OIDC exchanged Token (first 30 chars): ${installation_token.substring(0, 30)}...`);
     return installation_token;
 }
 async function run() {
@@ -30000,10 +29999,12 @@ async function run() {
         // 1. Get Inputs and Initialize
         const scene = core.getInput('scene', { required: true });
         const githubToken = await getGithubToken();
-        core.info(`Dispatcher: Github Token received. Length: ${githubToken.length}.`);
-        core.info(`Dispatcher: Token preview: ${githubToken.substring(0, 8)}...${githubToken.substring(githubToken.length - 8)}`);
         core.setOutput('github_token', githubToken);
         core.setSecret(githubToken);
+        execSync(`git config --global ` +
+            `url."https://x-access-token:${githubToken}@github.com/".insteadOf ` +
+            `"https://github.com/"`, { stdio: 'ignore' } // 避免在日志里回显命令
+        );
         const octokit = github.getOctokit(githubToken);
         const context = github.context;
         let finalSystemPrompt;

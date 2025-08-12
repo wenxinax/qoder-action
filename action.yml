@@ -42,10 +42,30 @@ runs:
         INPUT_APPEND_PROMPT: ${{ inputs.append_prompt }}
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
-        
-    - name: Debug Dispatcher Outputs
-      run: echo "Dispatcher github_token is ${{ steps.dispatcher.outputs.github_token }}"
+            
+    - name: Verify that git uses *our* token
+      env:
+        MY_TOKEN: ${{ steps.dispatcher.outputs.github_token }}  
       shell: bash
+      run: |
+        set -e
+
+        # ① 向 git 询问“对 https://github.com/ 用的是什么凭据”
+        cred=$(printf "url=https://github.com\n" | git credential fill)
+
+        # ② 解析出 git 返回的 password（如果没有说明没写进去）
+        current_token=$(echo "$cred" | grep '^password=' | cut -d= -f2-)
+
+        if [ -z "$current_token" ]; then
+          echo "❌  git 里没有任何 Token，后续 step 会失败"; exit 1
+        fi
+
+        # ③ 和我们的 Token 比对（比对前 8~10 位即可；不打印整串）
+        if [[ "${current_token:0:10}" == "${MY_TOKEN:0:10}" ]]; then
+          echo "✅ git 使用的确实是我们的 Token"
+        else
+          echo "❌ git 用的不是我们想要的 Token"; exit 1
+        fi
 
     - name: Run Qoder Core Action
       id: qoder
