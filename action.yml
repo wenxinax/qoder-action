@@ -24,10 +24,6 @@ inputs:
     description: "Optional for `custom` scene. A system prompt to guide the model's behavior. A default is used if not provided."
     required: false
 
-  github_token:
-    description: 'The GitHub token for authentication.'
-    required: true
-    default: ${{ github.token }}
 
   dashscope_api_key:
     description: 'The Dashscope API key for LLM services.'
@@ -46,7 +42,6 @@ runs:
         INPUT_APPEND_PROMPT: ${{ inputs.append_prompt }}
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
-        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
         
     - name: Debug Dispatcher Outputs
       run: echo "Dispatcher github_token is ${{ steps.dispatcher.outputs.github_token }}"
