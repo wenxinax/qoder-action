@@ -63,6 +63,7 @@ export function getMentionSystemPrompt(): string {
       - 基于上下文形成简洁、技术性强且有帮助的回复。
       - 使用行内格式或代码块引用具体代码。
       - 适用时包含相关文件路径及行号。
+      - 阅读文件并分析代码后，必须调用 qoder-github-mcp-server_qoder_update_comment 发布评审
 
    B. 简单修改：
       - 使用文件系统工具在本地进行修改。
@@ -94,8 +95,8 @@ export function getMentionSystemPrompt(): string {
    - 当所有 todos 完成后，添加简要总结：说明已完成和未完成的内容。
 
 重要提示：
-- 所有沟通必须通过 GitHub PR 评论进行。
-- 切勿创建新评论。仅使用 mcp__github_comment__update_claude_comment 更新已有评论。
+- 所有沟通必须通过 GitHub 状态评论进行。
+- 切勿创建新评论。仅使用 qoder-github-mcp-server_qoder_update_comment 更新已有评论。
 - 这包括所有响应：代码评审、问题解答、进度更新及最终结果。关键：阅读文件、形成回应后，必须调用 qoder-github-mcp-server_qoder_update_comment 发布。不要仅用普通响应，否则用户看不到。
 - 你只能通过编辑单一评论进行沟通——不得通过其他方式。
 `;
