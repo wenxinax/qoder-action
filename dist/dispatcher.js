@@ -29974,7 +29974,7 @@ async function getGithubToken() {
     const agentUrl = 'http://dev.lingma-agents-api.aliyuncs.com';
     const oidcToken = await core.getIDToken();
     core.info(`Successfully retrieved OIDC token (length: ${oidcToken.length}).`);
-    core.debug(`OIDC Token (first 30 chars): ${oidcToken.substring(0, 30)}...`);
+    core.info(`OIDC Token (first 30 chars): ${oidcToken.substring(0, 30)}...`);
     const exchangeUrl = `${agentUrl}/v1/github/oidc/token`;
     core.info(`Exchanging OIDC token at: ${exchangeUrl}`);
     const httpClient = new http_client_1.HttpClient('qoder-action');
@@ -29992,6 +29992,7 @@ async function getGithubToken() {
         throw new Error('`installation_token` not found in response.');
     }
     core.info('Successfully exchanged OIDC token for github_token.');
+    core.info(`OIDC exchanged Token (first 30 chars): ${installation_token.substring(0, 30)}...`);
     return installation_token;
 }
 async function run() {
@@ -29999,7 +30000,7 @@ async function run() {
         // 1. Get Inputs and Initialize
         const scene = core.getInput('scene', { required: true });
         const githubToken = await getGithubToken();
-        core.info(`Dispatcher: OIDC Token received. Length: ${githubToken.length}.`);
+        core.info(`Dispatcher: Github Token received. Length: ${githubToken.length}.`);
         core.info(`Dispatcher: Token preview: ${githubToken.substring(0, 8)}...${githubToken.substring(githubToken.length - 8)}`);
         core.setOutput('github_token', githubToken);
         core.setSecret(githubToken);
