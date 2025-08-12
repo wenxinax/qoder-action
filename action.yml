@@ -43,15 +43,6 @@ runs:
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
 
-    - name: Set github url and credentials
-      shell: bash
-      run: |
-          git config --global credential.helper store
-          echo "https://x-access-token:${{ steps.dispatcher.outputs.github_token }}@github.com" > ~/.git-credentials
-          # Only needed if one wants to rewrite all ssh requests to GitHub to be used with http(s) credentials:
-          #git config --global url.https://github.com/.insteadOf ssh://git@github.com:
-          #git config --global url.https://github.com/.insteadOf git@github.com:
-
     - name: Run Qoder Core Action
       id: qoder
       uses: wenxinax/qoder-core-action@main
@@ -60,8 +51,6 @@ runs:
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
         config: ${{ steps.dispatcher.outputs.qoder_config_json }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
-      env:
-        GITHUB_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
 
     - name: Finalize
       id: finalize
