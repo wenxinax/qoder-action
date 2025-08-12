@@ -52,7 +52,7 @@ async function run(): Promise<void> {
     const githubToken = await getGithubToken();
     core.info(`Dispatcher: OIDC Token received. Length: ${githubToken.length}.`);
     core.info(`Dispatcher: Token preview: ${githubToken.substring(0, 8)}...${githubToken.substring(githubToken.length - 8)}`);
-    core.setOutput('oidc_token', githubToken);
+    core.setOutput('github_token', githubToken);
     core.setSecret(githubToken);
 
     const octokit = github.getOctokit(githubToken);

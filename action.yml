@@ -55,14 +55,14 @@ runs:
         git config --global --unset-all credential.helper || true
         git config --global --unset-all url."https://github.com/".insteadOf || true
         # Set new config
-        git config --global url."https://x-access-token:${{ steps.dispatcher.outputs.oidc_token }}@github.com/".insteadOf "https://github.com/"
+        git config --global url."https://x-access-token:${{ steps.dispatcher.outputs.github_token }}@github.com/".insteadOf "https://github.com/"
         git config --global user.name "qoder-action"
         git config --global user.email "qoder-action@github.com"
         # Export environment variables for subsequent steps
-        echo "GITHUB_TOKEN=${{ steps.dispatcher.outputs.oidc_token }}" >> $GITHUB_ENV
-        echo "GH_TOKEN=${{ steps.dispatcher.outputs.oidc_token }}" >> $GITHUB_ENV
+        echo "GITHUB_TOKEN=${{ steps.dispatcher.outputs.github_token }}" >> $GITHUB_ENV
+        echo "GH_TOKEN=${{ steps.dispatcher.outputs.github_token }}" >> $GITHUB_ENV
         echo "GIT_USERNAME=x-access-token" >> $GITHUB_ENV
-        echo "GIT_PASSWORD=${{ steps.dispatcher.outputs.oidc_token }}" >> $GITHUB_ENV
+        echo "GIT_PASSWORD=${{ steps.dispatcher.outputs.github_token }}" >> $GITHUB_ENV
         # Clear GitHub Actions default tokens
         echo "ACTIONS_RUNTIME_TOKEN=" >> $GITHUB_ENV
         echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=" >> $GITHUB_ENV
@@ -76,12 +76,14 @@ runs:
     - name: Run Qoder Core Action
       id: qoder
       uses: wenxinax/qoder-core-action@main
+      env:
+        GITHUB_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
       with:
         system_prompt_path: ${{ steps.dispatcher.outputs.system_prompt_path }}
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
         config: ${{ steps.dispatcher.outputs.qoder_config_json }}
         dashscope_api_key: ${{ inputs.dashscope_api_key }}
-        oidc_token: ${{ steps.dispatcher.outputs.oidc_token }}
+        github_token: ${{ steps.dispatcher.outputs.github_token }}
 
     - name: Finalize
       id: finalize
@@ -94,5 +96,5 @@ runs:
         INPUT_COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
         INPUT_JOB_STATUS: ${{ job.status }}
         INPUT_QODER_RESULT: ${{ steps.qoder.outputs.result }}
-        INPUT_GITHUB_TOKEN: ${{ steps.dispatcher.outputs.oidc_token }}
+        INPUT_GITHUB_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
         INPUT_COMMENT_TYPE: ${{ steps.dispatcher.outputs.comment_type }}
