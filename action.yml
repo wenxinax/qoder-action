@@ -42,6 +42,14 @@ runs:
         INPUT_APPEND_PROMPT: ${{ inputs.append_prompt }}
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
+        
+    - name: Set github url and credentials
+      run: |
+          git config --global credential.helper store
+          echo "https://x-access-token:${{ steps.dispatcher.outputs.github_token }}@github.com" > ~/.git-credentials
+          # Only needed if one wants to rewrite all ssh requests to GitHub to be used with http(s) credentials:
+          #git config --global url.https://github.com/.insteadOf ssh://git@github.com:
+          #git config --global url.https://github.com/.insteadOf git@github.com:
 
     - name: Run Qoder Core Action
       id: qoder
