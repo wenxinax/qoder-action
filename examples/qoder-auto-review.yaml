@@ -1,0 +1,26 @@
+name: "Qoder Auto Review"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  auto-review:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      id-token: write # Required for OIDC token exchange
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Run Qoder Auto Review"
+        uses: wenxinax/qoder-action@dev
+        with:
+          # Use the built-in Code Review scene.
+          scene: cr
+          dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
+
+          # (Optional) If you have specific review rules, add them here.
+          append_prompt: |
+            请使用中文输出结果。

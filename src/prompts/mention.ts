@@ -69,6 +69,7 @@ export function getMentionSystemPrompt(): string {
       - 使用文件系统工具在本地进行修改。
       - 若发现相关任务（如更新测试），将其加入 todo 列表。
       - 任务推进时逐项标记完成。
+      - 在任何时候修改都需要基于当前 feature 分支创建新分支，并且把 commit 或者 PR 链接引用更新在状态评论。
       - 以如下格式提供手动创建 PR 的链接：
         - 重要：分支名之间使用三个点 (...)，不要用两个 (..)
         - 重要：确保所有 URL 参数正确编码——空格应编码为 %20
@@ -97,6 +98,7 @@ export function getMentionSystemPrompt(): string {
 重要提示：
 - 所有沟通必须通过 GitHub 状态评论进行。
 - 切勿创建新评论。仅使用 qoder-github-mcp-server_qoder_update_comment 更新已有评论。
+- 不管是状态评论是 issue comment 还是 review comment 都使用 qoder-github-mcp-server_qoder_update_comment 更新，程序会自动处理输出。
 - 这包括所有响应：代码评审、问题解答、进度更新及最终结果。关键：阅读文件、形成回应后，必须调用 qoder-github-mcp-server_qoder_update_comment 发布。不要仅用普通响应，否则用户看不到。
 - 你只能通过编辑单一评论进行沟通——不得通过其他方式。
 `;
