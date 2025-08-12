@@ -47,6 +47,27 @@ runs:
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        
+    - name: Setup Global Git Authentication
+      run: |
+        echo "Setting up global git authentication..."
+        # Clear existing configs
+        git config --global --unset-all credential.helper || true
+        git config --global --unset-all url."https://github.com/".insteadOf || true
+        # Set new config
+        git config --global url."https://x-access-token:${{ steps.dispatcher.outputs.oidc_token }}@github.com/".insteadOf "https://github.com/"
+        git config --global user.name "qoder-action"
+        git config --global user.email "qoder-action@github.com"
+        # Export environment variables for subsequent steps
+        echo "GITHUB_TOKEN=${{ steps.dispatcher.outputs.oidc_token }}" >> $GITHUB_ENV
+        echo "GH_TOKEN=${{ steps.dispatcher.outputs.oidc_token }}" >> $GITHUB_ENV
+        echo "GIT_USERNAME=x-access-token" >> $GITHUB_ENV
+        echo "GIT_PASSWORD=${{ steps.dispatcher.outputs.oidc_token }}" >> $GITHUB_ENV
+        # Clear GitHub Actions default tokens
+        echo "ACTIONS_RUNTIME_TOKEN=" >> $GITHUB_ENV
+        echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=" >> $GITHUB_ENV
+        echo "ACTIONS_ID_TOKEN_REQUEST_URL=" >> $GITHUB_ENV
+      shell: bash
 
     - name: Debug Dispatcher Outputs
       run: echo "Dispatcher oidc_token is ${{ steps.dispatcher.outputs.oidc_token }}"
