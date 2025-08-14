@@ -30027,24 +30027,6 @@ async function run() {
         }
         else {
             footerContent = `*Workflow finished successfully. You can view the full execution details in the [action logs](${checkRunUrl}).*`;
-            if (scene === 'cr' && pr) {
-                const promptText = [
-                    `Based on the following code review for pull request #${pr.number}, please fix the identified issues.`,
-                    `\n**PR Title**: ${pr.title}`,
-                    '---',
-                    '**Review Summary**:',
-                    qoderResult
-                ].join('\n');
-                const fixContext = {
-                    repo: context.repo.repo,
-                    owner: context.repo.owner,
-                    prNumber: pr.number,
-                    prompt: promptText
-                };
-                const base64Context = Buffer.from(JSON.stringify(fixContext)).toString('base64');
-                const fixUrl = `http://localhost:9080/reload-to-qoder?context=${base64Context}`;
-                footerContent += `\n\n[✨ One-Click Qoder Fix](${fixUrl})`;
-            }
             // For mention scene, the body is the result itself.
             if (scene === 'mention') {
                 bodyContent = qoderResult;
