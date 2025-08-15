@@ -395,7 +395,7 @@ ${originalUserPrompt}`;
             "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken },
             "type": "stdio"
           },
-          "qoder-github-mcp-server": {
+          "qoder-github": {
             "command": "docker",
             "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN", "-e", "GITHUB_OWNER", "-e", "GITHUB_REPO", "-e", "QODER_COMMENT_ID", "-e", "QODER_COMMENT_TYPE", "ghcr.io/wenxinax/qoder-github-mcp-server:latest"],
             "env": {
