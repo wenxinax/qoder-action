@@ -133,7 +133,7 @@ async function run(): Promise<void> {
     let commentId: string;
     let commentType: 'issue' | 'review' = 'issue';
 
-    const subagentTools = 'Glob,Grep,read,LS,WebFetch,WebSearch,Bash,qoder-github-mcp-server*,github_*';
+    const subagentTools = 'Glob,Grep,read,LS,WebFetch,WebSearch,Bash,mcp*';
 
     // 3. Scene-based Logic
     core.info(`Processing scene: ${scene}`);
