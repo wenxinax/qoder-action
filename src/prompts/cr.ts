@@ -52,12 +52,9 @@ export function getCrSystemPrompt(): string {
 - **行号准确性**：使用 \`mcp__qoder-github__add_comment_to_pending_review\` 时必须指定准确的代码块行号
 - **快捷修复约束**：只有在绝对确定修复方案正确且安全的情况下才使用 GitHub Suggestion
 
-### GitHub Suggestion 使用指南
-
-**仅限**：明显的拼写错误、简单类型注解、简单逻辑替换等单点修复问题。必须确保能完全替换选中代码块且不引入新问题。
+关于 GitHub Suggestion 使用:
+**准确**：仅在单点修复问题时使用。必须确保能完全替换选中代码块且不引入新问题。
 **注意**：注意给出的 suggestion 缩进和代码块缩进一致。
-
-**原则**：谨慎优先，有疑虑时只用文字说明。
 
 ## Review Summary 结构
 
