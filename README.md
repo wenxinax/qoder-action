@@ -64,8 +64,10 @@ jobs:
         uses: wenxinax/qoder-action@main 
         with:
           trigger_on: "event"
-          # 用于 AI 模型的 API Key
-          dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
+          # 用于 AI 模型的用户信息
+          qoder_user_info: ${{ secrets.QODER_USER_INFO }}
+          # 机器 ID
+          qoder_machine_id: ${{ secrets.QODER_MACHINE_ID }}
           # 要传递给 AI 的指令
           prompt: |
             Please review this pull request and provide comprehensive feedback.
@@ -86,7 +88,7 @@ jobs:
 
 - **GitHub App 安装**: 你必须在你的仓库或组织中安装 Qoder GitHub App，并授予其访问权限。
 - **权限配置**: 为了让 Action 能成功获取身份令牌并发布评论，你必须在 workflow 中添加 `permissions` 并授予 `pull-requests: write` 和 `id-token: write` 权限。
-- **密钥配置**: 你必须在你的 GitHub 仓库的 `Settings` -> `Secrets and variables` -> `Actions` 中创建一个名为 `DASHSCOPE_API_KEY` 的 `Repository secret`。
+- **密钥配置**: 你必须在你的 GitHub 仓库的 `Settings` -> `Secrets and variables` -> `Actions` 中创建名为 `QODER_USER_INFO` 和 `QODER_MACHINE_ID` 的 `Repository secret`。
 
 ## 输入参数
 
@@ -95,7 +97,8 @@ jobs:
 | `trigger_on`        | 定义触发机制。必须是 `mention` (评论提及) 或 `event` (事件触发) 之一。 | `true`   |                |
 | `mention_phrase`    | 当 `trigger_on` 为 `mention` 时，在评论中需要匹配的短语。            | `false`  | `@qoder`       |
 | `prompt`            | 提供给 AI 的高级指令。                                               | `false`  |                |
-| `dashscope_api_key` | 用于 Qoder 服务的身份验证令牌 (Dashscope API Key)。                  | `true`   |                |
+| `qoder_user_info`   | 用于 Qoder 认证的用户信息。                                      | `true`   |                |
+| `qoder_machine_id`  | 用于 Qoder 认证的机器 ID。                                        | `true`   |                |
 | `timeout_minutes`   | Action 执行的超时时间（分钟）。                                      | `false`  | `60`           |
 
 ## 设计理念

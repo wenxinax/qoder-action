@@ -19,7 +19,8 @@ jobs:
         with:
           # Use the built-in Code Review scene.
           scene: cr
-          dashscope_api_key: ${{ secrets.DASHSCOPE_API_KEY }}
+          qoder_user_info: ${{ secrets.QODER_USER_INFO }}
+          qoder_machine_id: ${{ secrets.QODER_MACHINE_ID }}
 
           # (Optional) If you have specific review rules, add them here.
           append_prompt: |

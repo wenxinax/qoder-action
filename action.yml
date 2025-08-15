@@ -25,8 +25,11 @@ inputs:
     required: false
 
 
-  dashscope_api_key:
-    description: 'The Dashscope API key for LLM services.'
+  qoder_user_info:
+    description: 'User information for Qoder authentication.'
+    required: true
+  qoder_machine_id:
+    description: 'Machine ID for Qoder authentication.'
     required: true
 
 runs:
@@ -50,7 +53,8 @@ runs:
         system_prompt_path: ${{ steps.dispatcher.outputs.system_prompt_path }}
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
         config: ${{ steps.dispatcher.outputs.qoder_config_json }}
-        dashscope_api_key: ${{ inputs.dashscope_api_key }}
+        qoder_user_info: ${{ inputs.qoder_user_info }}
+        qoder_machine_id: ${{ inputs.qoder_machine_id }}
 
     - name: Finalize
       id: finalize
