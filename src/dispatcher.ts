@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as fs from 'fs';
+import * as path from 'path';
 import { HttpClient } from '@actions/http-client';
 import { getCrSystemPrompt, getCrUserPrompt } from './prompts/cr';
 import { getMentionSystemPrompt, getMentionUserPrompt, MentionContext } from './prompts/mention';
@@ -128,15 +129,28 @@ async function run(): Promise<void> {
     }
     // --- MODIFICATION END ---
 
-    let finalSystemPrompt: string;
     let finalUserPrompt: string;
     let commentId: string;
     let commentType: 'issue' | 'review' = 'issue';
+
+    const subagentTools = 'Glob,Grep,read,LS,WebFetch,WebSearch,Bash,qoder-github-mcp-server*,github_*';
 
     // 3. Scene-based Logic
     core.info(`Processing scene: ${scene}`);
     switch (scene) {
       case 'cr': {
+        core.info('Setting up subagent for cr scene...');
+        const agentsDir = path.join(process.cwd(), '.qoder', 'agents');
+        fs.mkdirSync(agentsDir, { recursive: true });
+        const crAgentContent = `--- 
+name: github-action-pr-review
+description: 负责github action pr review
+tools: ${subagentTools}
+---
+${getCrSystemPrompt()}`;
+        fs.writeFileSync(path.join(agentsDir, 'github-action-pr-review.md'), crAgentContent);
+        core.info('Created github-action-pr-review.md subagent.');
+
         const pr = context.payload.pull_request;
         if (!pr) {
             throw new Error("Action currently only supports pull_request events.");
@@ -164,12 +178,25 @@ async function run(): Promise<void> {
         });
         commentId = comment.id.toString();
         core.info(`Initial comment created with ID: ${commentId}`);
-        finalSystemPrompt = getCrSystemPrompt();
-        finalUserPrompt = getCrUserPrompt(pr as PullRequest, core.getInput('append_prompt'));
+        const originalUserPrompt = getCrUserPrompt(pr as PullRequest, core.getInput('append_prompt'));
+        finalUserPrompt = `<请使用github-action-pr-review, 请原封不动地传递我的prompt>
+${originalUserPrompt}`;
         break;
       }
 
       case 'mention': {
+        core.info('Setting up subagent for mention scene...');
+        const agentsDir = path.join(process.cwd(), '.qoder', 'agents');
+        fs.mkdirSync(agentsDir, { recursive: true });
+        const mentionAgentContent = `--- 
+name: github-action-mention-handler
+description: 负责处理在github pr/issue中的@mention
+tools: ${subagentTools}
+---
+${getMentionSystemPrompt()}`;
+        fs.writeFileSync(path.join(agentsDir, 'github-action-mention-handler.md'), mentionAgentContent);
+        core.info('Created github-action-mention-handler.md subagent.');
+
         core.info(JSON.stringify(context, null, 2));
 
         core.info('-----------------');
@@ -288,8 +315,9 @@ async function run(): Promise<void> {
         
         core.info(`Reply comment created with ID: ${commentId}`);
 
-        finalSystemPrompt = getMentionSystemPrompt();
-        finalUserPrompt = getMentionUserPrompt(mentionContext, commentBody, core.getInput('append_prompt'));
+        const originalUserPrompt = getMentionUserPrompt(mentionContext, commentBody, core.getInput('append_prompt'));
+        finalUserPrompt = `<请使用github-action-mention-handler, 请原封不动地传递我的prompt>
+${originalUserPrompt}`;
         core.info('--- 生成的最终用户 Prompt ---');
         core.info(finalUserPrompt);
         core.info('--------------------------');
@@ -298,6 +326,18 @@ async function run(): Promise<void> {
       }
 
       case 'custom': {
+        core.info('Setting up subagent for custom scene...');
+        const agentsDir = path.join(process.cwd(), '.qoder', 'agents');
+        fs.mkdirSync(agentsDir, { recursive: true });
+        const customAgentContent = `--- 
+name: github-action-custom-task
+description: 在 github 环境执行用户定义的自定义任务
+tools: ${subagentTools}
+---
+${getDefaultSystemPrompt()}`;
+        fs.writeFileSync(path.join(agentsDir, 'github-action-custom-task.md'), customAgentContent);
+        core.info('Created github-action-custom-task.md subagent.');
+
         const pr = context.payload.pull_request;
         if (!pr) {
             throw new Error("Action currently only supports pull_request events.");
@@ -327,8 +367,7 @@ async function run(): Promise<void> {
         core.info(`Initial comment created with ID: ${commentId}`);
 
         const userPrompt = core.getInput('prompt', { required: true });
-        finalSystemPrompt = core.getInput('system_prompt') || getDefaultSystemPrompt();
-        finalUserPrompt = `### Pull Request Context
+        const originalUserPrompt = `### Pull Request Context
 - **Title**: ${pr.title}
 - **Author**: @${pr.user.login}
 - **Description**:
@@ -336,6 +375,8 @@ ${pr.body || 'No description provided.'}
 
 ### User Instruction
 ${userPrompt}`;
+        finalUserPrompt = `<请使用github-action-custom-task, 请原封不动地传递我的prompt>
+${originalUserPrompt}`;
         break;
       }
 
@@ -371,11 +412,6 @@ ${userPrompt}`;
     core.setOutput('qoder_config_json', configJson);
 
     // 5. Set Final Outputs
-    const systemPromptFilePath = './system_prompt.txt';
-    fs.writeFileSync(systemPromptFilePath, finalSystemPrompt);
-    core.info(`Final system prompt written to ${systemPromptFilePath}.`);
-    core.setOutput('system_prompt_path', systemPromptFilePath);
-
     const userPromptFilePath = './prompt.txt';
     fs.writeFileSync(userPromptFilePath, finalUserPrompt);
     core.info(`Final user prompt written to ${userPromptFilePath}.`);

@@ -20,9 +20,6 @@ inputs:
   prompt:
     description: "Required for `custom` scene. A detailed prompt that tells qoder what to do."
     required: false
-  system_prompt:
-    description: "Optional for `custom` scene. A system prompt to guide the model's behavior. A default is used if not provided."
-    required: false
 
 
   qoder_user_info:
@@ -50,7 +47,6 @@ runs:
       id: qoder
       uses: wenxinax/qoder-core-action@main
       with:
-        system_prompt_path: ${{ steps.dispatcher.outputs.system_prompt_path }}
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
         config: ${{ steps.dispatcher.outputs.qoder_config_json }}
         qoder_user_info: ${{ inputs.qoder_user_info }}
