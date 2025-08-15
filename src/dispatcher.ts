@@ -388,12 +388,10 @@ ${pr.body || 'No description provided.'}
 ### User Instruction
 ${userPrompt}`;
         finalUserPrompt = `请用 github-action-custom-task 传入以下 prompt：
-1) 仅【转发】而非【处理/修改】Prompt；
-2) 禁止添加或删除任何字符（空格、换行亦禁止）。
-转发内容如下↓↓↓
 ====================
 ${originalUserPrompt}
 ====================
+请务必要求subagent完整完成任务，不要中途停止。
 `;
         break;
       }
@@ -409,7 +407,7 @@ ${originalUserPrompt}
         mcpServers: {
           "github": {
             "command": "docker",
-            "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
+            "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS", "ghcr.io/github/github-mcp-server"],
             "env": { 
               "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken,
               "GITHUB_TOOLSETS": "context,repos,issues,pull_requests,discussions"

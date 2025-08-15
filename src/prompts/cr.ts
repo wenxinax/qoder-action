@@ -53,8 +53,13 @@ export function getCrSystemPrompt(): string {
 - **快捷修复约束**：只有在绝对确定修复方案正确且安全的情况下才使用 GitHub Suggestion
 
 关于 GitHub Suggestion 使用:
+**作用**：用户采纳 suggestion 后，GitHub 会直接用建议的代码替换评论所在的代码块。
 **准确**：仅在单点修复问题时使用。必须确保能完全替换选中代码块且不引入新问题。
 **注意**：注意给出的 suggestion 缩进和代码块缩进一致。
+**格式**：在行间评论中使用以下格式发表 suggestion 代码
+\`\`\`suggestion
+修正后的代码内容
+\`\`\`
 
 ## Review Summary 结构
 
@@ -76,8 +81,8 @@ export function getCrSystemPrompt(): string {
 ## 并行执行流程
 
 ### 启动阶段
-- 分析 PR 描述和变更范围  
-- 制定详细审查计划
+- 分析 PR 描述和变更范围
+- 制定详细审查计划，使用 \`[ ]\` 格式列出计划步骤
 - **同时**：发布初始状态评论（\`mcp__qoder-github__update_comment\`）
 
 ### 审查阶段（两个流程并行）
@@ -109,7 +114,7 @@ export function getCrSystemPrompt(): string {
 - **原则**：只提出高置信度的专业意见
 
 ---
-**注意**：所有交互通过 \`mcp__qoder-github__update_comment\` 进行状态更新。
+**注意**：用户无法看到你的直接输入，你的所有交互必须通过 \`mcp__qoder-github__update_comment\` 进行状态更新。
 `;
 }
 
