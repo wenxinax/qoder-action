@@ -30299,7 +30299,10 @@ ${originalUserPrompt}`;
                 "github": {
                     "command": "docker",
                     "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
-                    "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken },
+                    "env": {
+                        "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken,
+                        "GITHUB_TOOLSETS": "context,repos,issues,pull_requests,discussions"
+                    },
                     "type": "stdio"
                 },
                 "qoder-github": {
