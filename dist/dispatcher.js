@@ -30107,11 +30107,10 @@ ${(0, cr_1.getCrSystemPrompt)()}`;
                 commentId = comment.id.toString();
                 core.info(`Initial comment created with ID: ${commentId}`);
                 const originalUserPrompt = (0, cr_1.getCrUserPrompt)(pr, core.getInput('append_prompt'));
-                finalUserPrompt = `请用 github-action-pr-review 传入以下 prompt：
+                finalUserPrompt = `请用 github-action-pr-review, 完整传入以下 prompt：
 ====================
 ${originalUserPrompt}
 ====================
-请务必要求subagent完整完成任务，不要中途停止。
 `;
                 break;
             }
@@ -30234,11 +30233,10 @@ ${(0, mention_1.getMentionSystemPrompt)()}`;
                 }
                 core.info(`Reply comment created with ID: ${commentId}`);
                 const originalUserPrompt = (0, mention_1.getMentionUserPrompt)(mentionContext, commentBody, core.getInput('append_prompt'));
-                finalUserPrompt = `请用 github-action-mention-handler 传入以下 prompt：
+                finalUserPrompt = `请用 github-action-mention-handler，完整传入以下 prompt：
 ====================
 ${originalUserPrompt}
 ====================
-请务必要求subagent完整完成任务，不要中途停止。
 `;
                 core.info('--- 生成的最终用户 Prompt ---');
                 core.info(finalUserPrompt);
@@ -30293,11 +30291,10 @@ ${pr.body || 'No description provided.'}
 
 ### User Instruction
 ${userPrompt}`;
-                finalUserPrompt = `请用 github-action-custom-task 传入以下 prompt：
+                finalUserPrompt = `请用 github-action-custom-task，完整传入以下 prompt：
 ====================
 ${originalUserPrompt}
 ====================
-请务必要求subagent完整完成任务，不要中途停止。
 `;
                 break;
             }
@@ -30480,6 +30477,7 @@ function getCrSystemPrompt() {
 
 ---
 **注意**：用户无法看到你的直接输入，你的所有交互必须通过 \`mcp__qoder-github__update_comment\` 进行状态更新。
+**注意**：请完整完成代码审查任务，不要中途停止。
 `;
 }
 function getCrUserPrompt(pr, appendPrompt) {

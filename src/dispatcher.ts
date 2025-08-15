@@ -179,11 +179,10 @@ ${getCrSystemPrompt()}`;
         commentId = comment.id.toString();
         core.info(`Initial comment created with ID: ${commentId}`);
         const originalUserPrompt = getCrUserPrompt(pr as PullRequest, core.getInput('append_prompt'));
-        finalUserPrompt = `请用 github-action-pr-review 传入以下 prompt：
+        finalUserPrompt = `请用 github-action-pr-review, 完整传入以下 prompt：
 ====================
 ${originalUserPrompt}
 ====================
-请务必要求subagent完整完成任务，不要中途停止。
 `;
         break;
       }
@@ -320,11 +319,10 @@ ${getMentionSystemPrompt()}`;
         core.info(`Reply comment created with ID: ${commentId}`);
 
         const originalUserPrompt = getMentionUserPrompt(mentionContext, commentBody, core.getInput('append_prompt'));
-        finalUserPrompt = `请用 github-action-mention-handler 传入以下 prompt：
+        finalUserPrompt = `请用 github-action-mention-handler，完整传入以下 prompt：
 ====================
 ${originalUserPrompt}
 ====================
-请务必要求subagent完整完成任务，不要中途停止。
 `;
         core.info('--- 生成的最终用户 Prompt ---');
         core.info(finalUserPrompt);
@@ -383,11 +381,10 @@ ${pr.body || 'No description provided.'}
 
 ### User Instruction
 ${userPrompt}`;
-        finalUserPrompt = `请用 github-action-custom-task 传入以下 prompt：
+        finalUserPrompt = `请用 github-action-custom-task，完整传入以下 prompt：
 ====================
 ${originalUserPrompt}
 ====================
-请务必要求subagent完整完成任务，不要中途停止。
 `;
         break;
       }
