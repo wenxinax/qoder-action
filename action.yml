@@ -48,7 +48,6 @@ runs:
       uses: wenxinax/qoder-core-action@main
       with:
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
-        config: ${{ steps.dispatcher.outputs.qoder_config_json }}
         qoder_user_info: ${{ inputs.qoder_user_info }}
         qoder_machine_id: ${{ inputs.qoder_machine_id }}
 

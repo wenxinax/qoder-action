@@ -386,30 +386,30 @@ ${originalUserPrompt}`;
 
     core.setOutput('comment_id', commentId);
 
-    // 4. Generate MCP Config (preserved from original)
-    const mcpConfigTemplate = {
+    // 4. Generate .mcp.json
+    const mcpConfig = {
         mcpServers: {
           "github": {
             "command": "docker",
             "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
-            "env": ["GITHUB_PERSONAL_ACCESS_TOKEN={github_token}"]
+            "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken }
           },
           "qoder-github-mcp-server": {
             "command": "docker",
             "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN", "-e", "GITHUB_OWNER", "-e", "GITHUB_REPO", "-e", "QODER_COMMENT_ID", "-e", "QODER_COMMENT_TYPE", "ghcr.io/wenxinax/qoder-github-mcp-server:latest"],
-            "env": ["GITHUB_TOKEN={github_token}", "GITHUB_OWNER={github_owner}", "GITHUB_REPO={github_repo}", "QODER_COMMENT_ID={qoder_comment_id}", "QODER_COMMENT_TYPE={qoder_comment_type}"]
+            "env": {
+              "GITHUB_TOKEN": githubToken,
+              "GITHUB_OWNER": context.repo.owner,
+              "GITHUB_REPO": context.repo.repo,
+              "QODER_COMMENT_ID": commentId,
+              "QODER_COMMENT_TYPE": commentType
+            }
           }
         }
     };
-    let configJson = JSON.stringify(mcpConfigTemplate, null, 2)
-      .replace(/{github_token}/g, githubToken)
-      .replace(/{github_owner}/g, context.repo.owner)
-      .replace(/{github_repo}/g, context.repo.repo)
-      .replace(/{qoder_comment_id}/g, commentId)
-      .replace(/{qoder_comment_type}/g, commentType);
-
-    core.info(`Rendered config.json: ${configJson}`);
-    core.setOutput('qoder_config_json', configJson);
+    const mcpConfigPath = path.join(process.cwd(), '.mcp.json');
+    fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
+    core.info(`Created .mcp.json configuration file at ${mcpConfigPath}`);
 
     // 5. Set Final Outputs
     const userPromptFilePath = './prompt.txt';
