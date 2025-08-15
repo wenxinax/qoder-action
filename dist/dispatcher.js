@@ -30107,8 +30107,14 @@ ${(0, cr_1.getCrSystemPrompt)()}`;
                 commentId = comment.id.toString();
                 core.info(`Initial comment created with ID: ${commentId}`);
                 const originalUserPrompt = (0, cr_1.getCrUserPrompt)(pr, core.getInput('append_prompt'));
-                finalUserPrompt = `<请使用github-action-pr-review, 请原封不动地传递我的prompt>
-${originalUserPrompt}`;
+                finalUserPrompt = `请用 github-action-pr-review 传入以下 prompt：
+1) 仅【转发】而非【处理/修改】Prompt；
+2) 禁止添加或删除任何字符（空格、换行亦禁止）。
+转发内容如下↓↓↓
+====================
+${originalUserPrompt}
+====================
+`;
                 break;
             }
             case 'mention': {
@@ -30230,8 +30236,14 @@ ${(0, mention_1.getMentionSystemPrompt)()}`;
                 }
                 core.info(`Reply comment created with ID: ${commentId}`);
                 const originalUserPrompt = (0, mention_1.getMentionUserPrompt)(mentionContext, commentBody, core.getInput('append_prompt'));
-                finalUserPrompt = `<请使用github-action-mention-handler, 请原封不动地传递我的prompt>
-${originalUserPrompt}`;
+                finalUserPrompt = `请用 github-action-mention-handler 传入以下 prompt：
+1) 仅【转发】而非【处理/修改】Prompt；
+2) 禁止添加或删除任何字符。
+转发内容如下↓↓↓
+====================
+${originalUserPrompt}
+====================
+`;
                 core.info('--- 生成的最终用户 Prompt ---');
                 core.info(finalUserPrompt);
                 core.info('--------------------------');
@@ -30285,8 +30297,14 @@ ${pr.body || 'No description provided.'}
 
 ### User Instruction
 ${userPrompt}`;
-                finalUserPrompt = `<请使用github-action-custom-task, 请原封不动地传递我的prompt>
-${originalUserPrompt}`;
+                finalUserPrompt = `请用 github-action-custom-task 传入以下 prompt：
+1) 仅【转发】而非【处理/修改】Prompt；
+2) 禁止添加或删除任何字符（空格、换行亦禁止）。
+转发内容如下↓↓↓
+====================
+${originalUserPrompt}
+====================
+`;
                 break;
             }
             default:
@@ -30305,7 +30323,7 @@ ${originalUserPrompt}`;
                     },
                     "type": "stdio"
                 },
-                "qoder_github": {
+                "qoder-github": {
                     "command": "docker",
                     "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN", "-e", "GITHUB_OWNER", "-e", "GITHUB_REPO", "-e", "QODER_COMMENT_ID", "-e", "QODER_COMMENT_TYPE", "ghcr.io/wenxinax/qoder-github-mcp-server:latest"],
                     "env": {
