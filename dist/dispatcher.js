@@ -30299,7 +30299,8 @@ ${originalUserPrompt}`;
                 "github": {
                     "command": "docker",
                     "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
-                    "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken }
+                    "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken },
+                    "type": "stdio"
                 },
                 "qoder-github-mcp-server": {
                     "command": "docker",
@@ -30310,7 +30311,8 @@ ${originalUserPrompt}`;
                         "GITHUB_REPO": context.repo.repo,
                         "QODER_COMMENT_ID": commentId,
                         "QODER_COMMENT_TYPE": commentType
-                    }
+                    },
+                    "type": "stdio"
                 }
             }
         };
