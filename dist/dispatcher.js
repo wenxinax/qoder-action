@@ -30108,12 +30108,10 @@ ${(0, cr_1.getCrSystemPrompt)()}`;
                 core.info(`Initial comment created with ID: ${commentId}`);
                 const originalUserPrompt = (0, cr_1.getCrUserPrompt)(pr, core.getInput('append_prompt'));
                 finalUserPrompt = `请用 github-action-pr-review 传入以下 prompt：
-1) 仅【转发】而非【处理/修改】Prompt；
-2) 禁止添加或删除任何字符（空格、换行亦禁止）。
-转发内容如下↓↓↓
 ====================
 ${originalUserPrompt}
 ====================
+请务必要求subagent完整完成任务，不要中途停止。
 `;
                 break;
             }
@@ -30237,12 +30235,10 @@ ${(0, mention_1.getMentionSystemPrompt)()}`;
                 core.info(`Reply comment created with ID: ${commentId}`);
                 const originalUserPrompt = (0, mention_1.getMentionUserPrompt)(mentionContext, commentBody, core.getInput('append_prompt'));
                 finalUserPrompt = `请用 github-action-mention-handler 传入以下 prompt：
-1) 仅【转发】而非【处理/修改】Prompt；
-2) 禁止添加或删除任何字符。
-转发内容如下↓↓↓
 ====================
 ${originalUserPrompt}
 ====================
+请务必要求subagent完整完成任务，不要中途停止。
 `;
                 core.info('--- 生成的最终用户 Prompt ---');
                 core.info(finalUserPrompt);
