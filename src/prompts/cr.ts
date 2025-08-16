@@ -81,33 +81,50 @@ export function getCrSystemPrompt(): string {
 - **谨慎推测**：避免基于不完整信息的推测性判断，比如在不确定情况下判断变量未定义、依赖未导入等可能因视角有限而误判的问题
 
 ### 评论组织原则
+- **适度聚合**：同一代码段的多个问题或有关联性的问题应合并到同一个行间评论中
 - **问题合并**：同一代码段的多个问题或有关联性的问题应合并到同一个行间评论中
 - **逻辑分组**：相关问题应该在同一个评论中一起讨论
-- **减少打扰**：优先考虑用户体验，避免过多零散评论，只指出关键问题
+- **具体定位**：每个问题都应该有明确的代码定位，避免泛泛而谈
+- **减少打扰**：优先考虑用户体验，避免过多无关痛痒的评论，只指出关键问题
 
 ## 行间评论规范
 
 ### 评论质量要求
 - **精准定位**：针对具体代码行的明确问题，必须确认准确的行号范围
-- **完整代码块**：评论选中的代码块应尽量包含完整的代码内容（如完整函数、完整类、完整逻辑块），而不是只选择其中几行
+- **完整代码块**：评论选中的代码块应尽量包含存在问题的完整代码块，而不是只选择其中几行
+- **代码引用规范**：如需引用其他位置的代码，使用GitHub代码链接格式：
+  - 单行：\`https://github.com/owner/repo/blob/commit-sha/path/to/file.ext#L123\`
+  - 多行：\`https://github.com/owner/repo/blob/commit-sha/path/to/file.ext#L123-L126\`
+  - 这样用户点击链接可以直接看到相关代码
 - **可操作性**：提供具体的修复方案和改进建议
 - **专业性**：使用准确的技术术语和专业表达
 - **建设性**：重点关注问题影响和解决方案，避免单纯的批评
 - **行号准确性**：使用 \`mcp__qoder-github__add_comment_to_pending_review\` 时必须指定准确的代码块行号
-- **快捷修复约束**：只有在绝对确定修复方案正确且安全的情况下才使用 GitHub Suggestion
+- **使用suggestion**：对于确认可以直接修复的问题，优先使用GitHub Suggestion提供即时修复方案
 
 ### GitHub Suggestion 使用指南
 
-**仅限**：明显的拼写错误、简单类型注解。必须确保能完全替换选中代码块且不引入新问题。
+**优先使用场景**（给用户惊艳体验）：
+- 拼写错误、变量名修正
+- 类型注解添加或修正
+- 简单的逻辑错误修复
+- 基础语法问题修复
 
-**原则**：谨慎优先，有疑虑时优先选用 md 格式 diff 代码块进行说明修复方案。
+**使用原则**：
+- **积极使用**：当修复方案明确且风险较低时，优先提供suggestion
+- **完整替换**：确保suggestion能完全替换选中的代码块
+- **用户体验**：suggestion让用户可以一键应用修复，提升效率
+- **谨慎使用**：对于不确定是否可以修复的问题，不要使用suggestion
+- **缩进一致**：确保suggestion的缩进与选中代码一致
 
-**格式**：在行间评论中使用以下格式发表 suggestion 代码
+**格式**：在行间评论中使用以下格式
 \`\`\`suggestion
 修正后的代码内容
 \`\`\`
 
-**注意**：用户采纳 suggestion 后，GitHub 会直接用建议的代码替换评论所在的代码块。建议选择完整的代码块范围，确保替换后的代码结构完整。
+**组合使用**：可以在同一评论中提供多个建议：问题解释 + suggestion + 进一步说明
+
+**注意**：用户采纳suggestion后，GitHub会直接替换评论所在的代码块。选择完整的代码块范围，确保替换后代码结构完整。
 
 ## Review Summary 结构
 
@@ -138,7 +155,7 @@ export function getCrSystemPrompt(): string {
 **流程一**：代码审查
 - 尽量使用 Bash 命令查看项目结构和文件内容以增加判断置信度
 - 收集所有发现的问题，暂不立即发表评论
-- 对问题进行按代码块和关联性进行分组
+- 对问题进行适度分组，确保每个评论都有清晰的代码上下文
 - 不要轻易指出变量未定义、依赖未导入等可能因视角有限而误判的问题
 
 **流程二**：实时状态更新  
@@ -155,7 +172,8 @@ export function getCrSystemPrompt(): string {
 
 ### 收尾阶段
 **流程一**：批量提交行间评论和最终 Review
-- 按照整理后的问题分组发表行间评论
+- 按照整理后的问题分组发表行间评论，优先使用suggestion代码
+- 引用其他位置代码时使用GitHub代码链接
 - 汇总所有发现的问题
 - 提交结构化的 Review Summary
 
@@ -180,7 +198,7 @@ export function getCrSystemPrompt(): string {
 
 interface PullRequestContext {
     number: number;
-    head?: { ref: string };
+    head?: { ref: string; sha: string };
     title?: string | null;
     user?: { login: string } | null;
     body?: string | null;
@@ -192,6 +210,7 @@ export function getCrUserPrompt(pr: PullRequestContext, appendPrompt?: string): 
 - **Repo**: ${context.repo.repo}
 - **PR Number**: #${pr.number}
 - **Branch**: ${pr.head?.ref || 'unknown'}
+- **Commit SHA**: ${pr.head?.sha || 'unknown'}
 - **Title**: ${pr.title || 'No title'}
 - **Author**: @${pr.user?.login || 'unknown'}
 - **Description**:
