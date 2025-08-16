@@ -158,7 +158,7 @@ graph TB
     subgraph "场景路由"
         B --> E{场景识别}
         E -->|pull_request| F[CR 模式]
-        E -->|@qoder mention| G[Mention 模式]
+        E -->|mention| G[Mention 模式]
     end
     
     subgraph "子代理执行"
@@ -361,28 +361,6 @@ append_prompt: |
 - **权限不足**：确认工作流权限设置正确
 - **触发条件**：验证事件类型和条件表达式
 - **网络问题**：检查 Docker 镜像拉取和 MCP 服务器连接
-
----
-
-## 🤝 开发贡献
-
-
-### 开发环境
-
-```bash
-git clone https://github.com/wenxinax/qoder-action.git
-cd qoder-action
-git checkout dev
-
-# 安装依赖
-npm install
-cd qoder-core-action && npm install
-
-# 构建项目
-npm run build
-cd qoder-core-action && npm run build
-```
-
 
 ---
 
