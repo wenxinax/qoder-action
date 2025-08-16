@@ -1,22 +1,20 @@
-name: 'Qoder Core Logic'
+name: 'Qoder Core Action'
 description: 'Downloads and runs the qoder-cli with specified prompts.'
 
 inputs:
-  prompt_file_path:
-    description: 'The path to the file containing the main prompt.'
-    required: true
-  system_prompt:
-    description: 'An optional system prompt to guide the AI.'
+  prompt:
+    description: 'The main prompt string. Mutually exclusive with prompt_file_path.'
     required: false
-  dashscope_api_key:
-    description: 'The API key for the Dashscope service.'
+  prompt_path:
+    description: 'The path to the file containing the main prompt. Mutually exclusive with prompt.'
+    required: false
+  qoder_user_info:
+    description: 'User information for Qoder authentication.'
+    required: true
+  qoder_machine_id:
+    description: 'Machine ID for Qoder authentication.'
     required: true
 
-outputs:
-  result_type:
-    description: 'The result type from the qoder-cli output (e.g., success, error).'
-  result_content:
-    description: 'The main content of the result from the qoder-cli.'
 
 runs:
   using: 'node20'

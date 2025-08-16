@@ -29964,71 +29964,888 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(6307));
 const github = __importStar(__nccwpck_require__(1967));
 const fs = __importStar(__nccwpck_require__(9896));
+const path = __importStar(__nccwpck_require__(6928));
+const http_client_1 = __nccwpck_require__(4451);
+const cr_1 = __nccwpck_require__(8241);
+const mention_1 = __nccwpck_require__(9084);
+const custom_1 = __nccwpck_require__(6487);
+// execSync is already here, which is great.
+const { execSync } = __nccwpck_require__(5317);
+// This function is preserved from your original file to handle authentication.
+async function getGithubToken() {
+    core.info('Requesting OIDC token...');
+    const agentUrl = 'http://dev.lingma-agents-api.aliyuncs.com';
+    const oidcToken = await core.getIDToken();
+    core.info(`Successfully retrieved OIDC token (length: ${oidcToken.length}).`);
+    const exchangeUrl = `${agentUrl}/v1/github/oidc/token`;
+    core.info(`Exchanging OIDC token at: ${exchangeUrl}`);
+    const httpClient = new http_client_1.HttpClient('qoder-action');
+    const response = await httpClient.post(exchangeUrl, `oidc_token=${encodeURIComponent(oidcToken)}`, {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    });
+    core.info(`Received response with status code: ${response.message.statusCode}`);
+    const body = await response.readBody();
+    core.info(`Response body: ${body}`);
+    if (response.message.statusCode !== 200) {
+        throw new Error(`Failed to get github_token. Status: ${response.message.statusCode}. Body: ${body}`);
+    }
+    const { installation_token } = JSON.parse(body);
+    if (!installation_token) {
+        throw new Error('`installation_token` not found in response.');
+    }
+    core.info('Successfully exchanged OIDC token for github_token.');
+    return installation_token;
+}
 async function run() {
     try {
-        const triggerOn = core.getInput('trigger_on', { required: true });
-        core.info(`Triggering on: ${triggerOn}`);
-        const userPrompt = core.getInput('prompt');
-        // Manually check for required prompt based on trigger
-        if (triggerOn === 'event' && !userPrompt) {
-            core.setFailed('The "prompt" input is required when "trigger_on" is "event".');
-            return;
-        }
-        const githubToken = core.getInput('github_token', { required: true });
-        if (!githubToken) {
-            throw new Error("GITHUB_TOKEN is required but not provided.");
-        }
+        // 1. Get Inputs and Initialize
+        const scene = core.getInput('scene', { required: true });
+        const githubToken = await getGithubToken();
+        core.setOutput('github_token', githubToken);
+        core.setSecret(githubToken);
         const octokit = github.getOctokit(githubToken);
         const context = github.context;
-        if (context.eventName !== "pull_request") {
-            core.info(`Skipping Qoder action execution because the event is not a pull request.`);
-            core.setOutput("should_run", "false");
-            return;
+        // --- MODIFICATION START ---
+        // The 'insteadOf' config is removed and replaced with a more direct approach.
+        core.info('=== Git Directory Debug Info (BEFORE) ===');
+        try {
+            const currentDir = execSync('pwd', { encoding: 'utf8' }).trim();
+            core.info(`Current directory: ${currentDir}`);
+            const gitRemote = execSync('git remote -v', { encoding: 'utf8' }).trim();
+            core.info(`Current git remotes:\n${gitRemote}`);
+            const isGitRepo = execSync('git rev-parse --is-inside-work-tree', { encoding: 'utf8' }).trim();
+            core.info(`Is git repo: ${isGitRepo}`);
+            // Check environment variables that might interfere
+            core.info(`GITHUB_TOKEN env var exists: ${process.env.GITHUB_TOKEN ? 'Yes (hidden)' : 'No'}`);
+            core.info(`GITHUB_ACTOR env var: ${process.env.GITHUB_ACTOR || 'Not set'}`);
+            // Check current git config
+            try {
+                const currentUserName = execSync('git config user.name', { encoding: 'utf8' }).trim();
+                const currentUserEmail = execSync('git config user.email', { encoding: 'utf8' }).trim();
+                core.info(`Current git user: ${currentUserName} <${currentUserEmail}>`);
+            }
+            catch (e) {
+                core.info('No git user configured yet');
+            }
         }
-        const pr = context.payload.pull_request;
-        if (!pr) {
-            throw new Error("Pull request payload is missing.");
+        catch (error) {
+            core.warning(`Pre-config debug info failed: ${error}`);
         }
-        core.debug(`Processing pull request: ${pr.title} (#${pr.number})`);
-        core.info("Creating initial status comment...");
-        const welcomeMessage = "👋 Hello! Qoder is analyzing this pull request. I will update this comment with the results shortly.";
-        const { data: comment } = await octokit.rest.issues.createComment({
-            ...context.repo,
-            issue_number: pr.number,
-            body: welcomeMessage,
-        });
-        core.info(`Initial comment created with ID: ${comment.id}`);
-        core.setOutput('comment_id', comment.id.toString());
-        core.info('Gather PR infomation...');
-        const { data: diff } = await octokit.rest.pulls.get({
-            ...context.repo,
-            pull_number: pr.number,
-            mediaType: {
-                format: "diff",
-            },
-        });
-        const finalPrompt = `
-      ${userPrompt}
-      Pull Request Analysis Request:
-      - Title: ${pr.title}
-      - Author: @${pr.user.login}
-      - Body: ${pr.body}
-      - Diff:\n      \`\`\`diff\n      ${diff}\n      \`\`\`\n    `;
-        fs.writeFileSync('./prompt.txt', finalPrompt);
-        core.info(`Prompt (first 200 chars): ${finalPrompt.substring(0, 200)}...`);
-        core.setOutput('should_run', "true");
-        core.setOutput('prompt_file_path', './prompt.txt');
+        core.info('Setting up git identity with GitHub App credentials...');
+        // Construct the new remote URL with the app token
+        const repoUrl = `https://x-access-token:${githubToken}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
+        // It's best practice to set the committer's identity to the app's identity.
+        // You can find your app's name and ID to form the email.
+        const appName = 'qoder-app[bot]'; // Replace with your app's name if you wish
+        const appEmail = 'qoder-app[bot]@users.noreply.github.com'; // Replace with your app's ID
+        // Forcefully update the remote URL and set the user config for the repository
+        try {
+            // Clear any existing credential helpers that might interfere
+            execSync('git config --unset-all credential.helper', { stdio: 'pipe' }).catch(() => { });
+            execSync(`git remote set-url origin ${repoUrl}`, { stdio: 'pipe' });
+            execSync(`git config user.name "${appName}"`, { stdio: 'pipe' });
+            execSync(`git config user.email "${appEmail}"`, { stdio: 'pipe' });
+            // Also set global git config to ensure consistency
+            execSync(`git config --global user.name "${appName}"`, { stdio: 'pipe' });
+            execSync(`git config --global user.email "${appEmail}"`, { stdio: 'pipe' });
+            core.info(`Git remote URL updated and user configured as ${appName}.`);
+            // Verify the changes
+            core.info('=== Git Directory Debug Info (AFTER) ===');
+            const newGitRemote = execSync('git remote -v', { encoding: 'utf8' }).trim();
+            core.info(`Updated git remotes:\n${newGitRemote}`);
+            const gitUserName = execSync('git config user.name', { encoding: 'utf8' }).trim();
+            const gitUserEmail = execSync('git config user.email', { encoding: 'utf8' }).trim();
+            core.info(`Git user configured as: ${gitUserName} <${gitUserEmail}>`);
+        }
+        catch (error) {
+            core.warning(`Failed to configure git: ${error}`);
+        }
+        // --- MODIFICATION END ---
+        let finalUserPrompt;
+        let commentId;
+        let commentType = 'issue';
+        const subagentTools = 'Glob,Grep,read,LS,WebFetch,WebSearch,Bash,mcp*';
+        // 3. Scene-based Logic
+        core.info(`Processing scene: ${scene}`);
+        switch (scene) {
+            case 'cr': {
+                core.info('Setting up subagent for cr scene...');
+                const agentsDir = path.join(process.cwd(), '.qoder', 'agents');
+                fs.mkdirSync(agentsDir, { recursive: true });
+                const crAgentContent = `--- 
+name: github-action-pr-review
+description: 负责github action pr review
+tools: ${subagentTools}
+---
+${(0, cr_1.getCrSystemPrompt)()}`;
+                fs.writeFileSync(path.join(agentsDir, 'github-action-pr-review.md'), crAgentContent);
+                core.info('Created github-action-pr-review.md subagent.');
+                const pr = context.payload.pull_request;
+                if (!pr) {
+                    throw new Error("Action currently only supports pull_request events.");
+                }
+                const runId = context.runId;
+                const workflowUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
+                // Enhanced status comment for CR scene
+                const welcomeMessage = `<!-- QODER_HEADER_START -->
+👋 Hello! I'm Qoder, your AI code assistant.
+<!-- QODER_HEADER_END -->
+
+---
+
+<!-- QODER_BODY_START -->
+⏳ I'm analyzing this pull request for code review. I will post my findings shortly.
+<!-- QODER_BODY_END -->
+
+<!-- QODER_FOOTER_START -->
+*You can monitor the progress in the [action logs](${workflowUrl})*
+<!-- QODER_FOOTER_END -->`;
+                const { data: comment } = await octokit.rest.issues.createComment({
+                    ...context.repo,
+                    issue_number: pr.number,
+                    body: welcomeMessage,
+                });
+                commentId = comment.id.toString();
+                core.info(`Initial comment created with ID: ${commentId}`);
+                const originalUserPrompt = (0, cr_1.getCrUserPrompt)(pr, core.getInput('append_prompt'));
+                finalUserPrompt = `请用 github-action-pr-review, 完整传入以下 prompt：
+====================
+${originalUserPrompt}
+====================
+`;
+                break;
+            }
+            case 'mention': {
+                core.info('Setting up subagent for mention scene...');
+                const agentsDir = path.join(process.cwd(), '.qoder', 'agents');
+                fs.mkdirSync(agentsDir, { recursive: true });
+                const mentionAgentContent = `--- 
+name: github-action-mention-handler
+description: 负责处理在github pr/issue中的@mention
+tools: ${subagentTools}
+---
+${(0, mention_1.getMentionSystemPrompt)()}`;
+                fs.writeFileSync(path.join(agentsDir, 'github-action-mention-handler.md'), mentionAgentContent);
+                core.info('Created github-action-mention-handler.md subagent.');
+                core.info(JSON.stringify(context, null, 2));
+                core.info('-----------------');
+                core.info(`Event name: ${context.eventName}`);
+                core.info('-----------------');
+                const commentPayload = context.payload.comment;
+                core.info('Comment payload:');
+                core.info(JSON.stringify(commentPayload, null, 2));
+                core.info('-----------------');
+                const allowedEvents = ['issue_comment', 'pull_request_review_comment'];
+                if (!allowedEvents.includes(context.eventName)) {
+                    throw new Error(`The 'mention' scene only works with '${allowedEvents.join("or ")}' events.`);
+                }
+                if (!commentPayload) {
+                    core.info("Comment payload is missing, skipping.");
+                    core.setOutput('should_run', 'false');
+                    return;
+                }
+                const commentBody = commentPayload.body;
+                if (!commentBody.includes('@qoder')) {
+                    core.info("Comment does not mention @qoder, skipping.");
+                    core.setOutput('should_run', 'false');
+                    return;
+                }
+                const issue = context.payload.issue;
+                const pr = context.payload.pull_request;
+                const source = pr || issue;
+                const mentionContext = {
+                    type: pr ? 'pr' : 'issue',
+                    source: source,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                };
+                if (pr) {
+                    commentType = 'review';
+                }
+                if (context.eventName === 'pull_request_review_comment') {
+                    const reviewComment = commentPayload;
+                    if (reviewComment.line !== null) {
+                        mentionContext.code_context = {
+                            path: reviewComment.path,
+                            diff_hunk: reviewComment.diff_hunk,
+                            start_line: reviewComment.start_line ?? undefined,
+                            line: reviewComment.line,
+                        };
+                    }
+                }
+                if (context.eventName === 'pull_request_review_comment') {
+                    core.info('进入 pull_request_review_comment 逻辑分支');
+                    const reviewComment = commentPayload;
+                    if (reviewComment.in_reply_to_id) {
+                        core.info(`正在处理回复评论，in_reply_to_id: ${reviewComment.in_reply_to_id}`);
+                        const allReviewComments = await octokit.paginate(octokit.rest.pulls.listReviewComments, {
+                            ...context.repo,
+                            pull_number: pr.number,
+                        });
+                        core.info(`获取到 ${allReviewComments.length} 条评审评论`);
+                        core.debug(`所有评审评论内容: ${JSON.stringify(allReviewComments, null, 2)}`);
+                        const topLevelComment = allReviewComments.find(c => c.id === reviewComment.in_reply_to_id);
+                        if (topLevelComment) {
+                            core.info(`找到顶层评论: ${topLevelComment.id}`);
+                            const thread = [topLevelComment, ...allReviewComments.filter(c => c.in_reply_to_id === reviewComment.in_reply_to_id)];
+                            mentionContext.thread = thread;
+                            core.info(`构建出的对话线程包含 ${thread.length} 条评论`);
+                            core.debug(`构建的线程内容: ${JSON.stringify(thread, null, 2)}`);
+                        }
+                        else {
+                            core.warning('没有找到顶层评论');
+                        }
+                    }
+                    else {
+                        core.info('评论不是一个回复，不构建对话线程');
+                    }
+                }
+                const runId = context.runId;
+                const workflowUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
+                const welcomeMessage = `<!-- QODER_HEADER_START -->
+👋 Hello! I'm Qoder, your AI assistant.
+<!-- QODER_HEADER_END -->
+
+---
+
+<!-- QODER_BODY_START -->
+⏳ I'm analyzing your request... I will post my response shortly.
+<!-- QODER_BODY_END -->
+
+<!-- QODER_FOOTER_START -->
+*You can monitor the progress in the [action logs](${workflowUrl})*
+<!-- QODER_FOOTER_END -->`;
+                if (context.eventName === 'pull_request_review_comment') {
+                    const { data: replyComment } = await octokit.rest.pulls.createReplyForReviewComment({
+                        ...context.repo,
+                        pull_number: pr.number,
+                        body: welcomeMessage,
+                        comment_id: commentPayload.id
+                    });
+                    commentId = replyComment.id.toString();
+                }
+                else { // issue_comment
+                    const { data: replyComment } = await octokit.rest.issues.createComment({
+                        ...context.repo,
+                        issue_number: source.number,
+                        body: welcomeMessage,
+                    });
+                    commentId = replyComment.id.toString();
+                }
+                core.info(`Reply comment created with ID: ${commentId}`);
+                const originalUserPrompt = (0, mention_1.getMentionUserPrompt)(mentionContext, commentBody, core.getInput('append_prompt'));
+                finalUserPrompt = `请用 github-action-mention-handler，完整传入以下 prompt：
+====================
+${originalUserPrompt}
+====================
+`;
+                core.info('--- 生成的最终用户 Prompt ---');
+                core.info(finalUserPrompt);
+                core.info('--------------------------');
+                core.setOutput('comment_type', commentType);
+                break;
+            }
+            case 'custom': {
+                core.info('Setting up subagent for custom scene...');
+                const agentsDir = path.join(process.cwd(), '.qoder', 'agents');
+                fs.mkdirSync(agentsDir, { recursive: true });
+                const customAgentContent = `--- 
+name: github-action-custom-task
+description: 在 github 环境执行用户定义的自定义任务
+tools: ${subagentTools}
+---
+${(0, custom_1.getDefaultSystemPrompt)()}`;
+                fs.writeFileSync(path.join(agentsDir, 'github-action-custom-task.md'), customAgentContent);
+                core.info('Created github-action-custom-task.md subagent.');
+                const pr = context.payload.pull_request;
+                if (!pr) {
+                    throw new Error("Action currently only supports pull_request events.");
+                }
+                const runId = context.runId;
+                const workflowUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
+                // Enhanced status comment for custom scene
+                const welcomeMessage = `<!-- QODER_HEADER_START -->
+👋 Hello! I'm Qoder, your AI code assistant.
+<!-- QODER_HEADER_END -->
+
+---
+
+<!-- QODER_BODY_START -->
+⏳ I'm executing your custom task. I will post the results shortly.
+<!-- QODER_BODY_END -->
+
+<!-- QODER_FOOTER_START -->
+*You can monitor the progress in the [action logs](${workflowUrl})*
+<!-- QODER_FOOTER_END -->`;
+                const { data: comment } = await octokit.rest.issues.createComment({
+                    ...context.repo,
+                    issue_number: pr.number,
+                    body: welcomeMessage,
+                });
+                commentId = comment.id.toString();
+                core.info(`Initial comment created with ID: ${commentId}`);
+                const userPrompt = core.getInput('prompt', { required: true });
+                const originalUserPrompt = `### Pull Request Context
+- **Title**: ${pr.title}
+- **Author**: @${pr.user.login}
+- **Description**:
+${pr.body || 'No description provided.'}
+
+### User Instruction
+${userPrompt}`;
+                finalUserPrompt = `请用 github-action-custom-task，完整传入以下 prompt：
+====================
+${originalUserPrompt}
+====================
+`;
+                break;
+            }
+            default:
+                throw new Error(`Unknown scene: '${scene}'. Valid scenes are 'cr', 'mention', 'custom'.`);
+        }
+        core.setOutput('comment_id', commentId);
+        // 4. Generate .mcp.json
+        const mcpConfig = {
+            mcpServers: {
+                "github": {
+                    "command": "docker",
+                    "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS", "ghcr.io/github/github-mcp-server"],
+                    "env": {
+                        "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken,
+                        "GITHUB_TOOLSETS": "context,repos,issues,pull_requests,discussions"
+                    },
+                    "type": "stdio"
+                },
+                "qoder-github": {
+                    "command": "docker",
+                    "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN", "-e", "GITHUB_OWNER", "-e", "GITHUB_REPO", "-e", "QODER_COMMENT_ID", "-e", "QODER_COMMENT_TYPE", "ghcr.io/wenxinax/qoder-github-mcp-server:latest"],
+                    "env": {
+                        "GITHUB_TOKEN": githubToken,
+                        "GITHUB_OWNER": context.repo.owner,
+                        "GITHUB_REPO": context.repo.repo,
+                        "QODER_COMMENT_ID": commentId,
+                        "QODER_COMMENT_TYPE": commentType
+                    },
+                    "type": "stdio"
+                }
+            }
+        };
+        const mcpConfigPath = path.join(process.cwd(), '.mcp.json');
+        fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
+        core.info(`Created .mcp.json configuration file at ${mcpConfigPath}`);
+        // 5. Set Final Outputs
+        const userPromptFilePath = './prompt.txt';
+        fs.writeFileSync(userPromptFilePath, finalUserPrompt);
+        core.info(`Final user prompt written to ${userPromptFilePath}.`);
+        core.debug(`Prompt content (first 200 chars): ${finalUserPrompt.substring(0, 200)}...`);
+        core.setOutput('prompt_path', userPromptFilePath);
+        core.setOutput('should_run', 'true');
     }
     catch (error) {
         if (error instanceof Error) {
             core.setFailed(error.message);
         }
         else {
-            core.setFailed("An unknown error occurred");
+            core.setFailed('An unknown error occurred');
         }
     }
 }
 run();
+
+
+/***/ }),
+
+/***/ 8241:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getCrSystemPrompt = getCrSystemPrompt;
+exports.getCrUserPrompt = getCrUserPrompt;
+const github_1 = __nccwpck_require__(1967);
+function getCrSystemPrompt() {
+    return `
+# Qoder - 专业代码审查 AI 助手
+
+你是 Qoder，一个智能代码助手，负责对 Pull Request 进行全面且深入的代码审查。
+
+你是 GitHub Action 里运行的程序，运行在项目目录下，拥有 Bash 环境和必要的 GitHub 工具。你只能使用系统提供的 GitHub 状态评论展示你的实时状态。
+
+## 核心职责
+
+你需要**同时进行**以下两个并行流程：
+
+### 流程一：实时状态追踪
+使用 \`mcp__qoder-github__update_comment\` 持续维护 GitHub 状态评论：
+
+**初始状态评论要求**：
+- **PR变更概况分析**：总结变更文件数量、主要修改类型、影响范围
+- **详细评审计划**：基于变更内容制定具体的审查任务清单
+- **进度追踪格式**：使用 \`[ ]\` 表示未完成，\`[x]\` 表示已完成
+
+**实时更新要求**：
+- 每完成一个审查任务立即更新对应的 \`[ ]\` 为 \`[x]\`
+- 实时报告当前进展findings
+- 保持状态评论的时效性和准确性
+
+### 流程二：专业代码审查  
+并行使用 GitHub Review 工具发表审查意见：
+- **行间评论**：必须使用 \`mcp__qoder-github__add_comment_to_pending_review\` 发表行间评论
+- **提交Review**：包含完整 Review Summary
+
+**重要**：两个流程需要**同步进行**，一边审查代码一边更新进度状态。
+
+## 审查原则
+
+### 关注的问题类型
+**功能性问题**：
+- 逻辑错误、算法缺陷、边界条件未处理
+- 业务逻辑实现错误或不完整
+
+**安全性问题**：
+- 输入验证缺失、注入漏洞、权限控制
+- 敏感数据处理不当、加密问题
+
+**性能问题**：
+- 算法复杂度、资源使用、内存泄漏
+- 数据库查询、网络请求优化
+
+**可维护性问题**：
+- 代码可读性、命名规范、注释缺失
+- 架构设计、代码重复、技术债务
+
+**鲁棒性问题**：
+- 异常处理、错误检查、容错机制
+- 并发安全、资源管理
+
+### 优先级判断标准
+**P0 - 阻塞级（必须修复）**：
+- **影响范围**：核心功能受影响或系统无法正常运行
+- **后果严重性**：数据丢失、安全漏洞、系统崩溃
+- **用户影响**：阻止用户完成关键操作
+
+**P1 - 重要级（强烈建议修复）**：
+- **影响范围**：部分功能受影响或性能显著下降
+- **后果严重性**：功能异常、性能问题、维护困难
+- **用户影响**：影响用户体验但不阻塞核心流程
+
+**P2 - 改进级（建议优化）**：
+- **后果严重性**：代码质量、可读性、最佳实践
+- **用户影响**：间接影响，主要关注开发体验
+- **注意**：不要对代码注释、日志记录等过多挑剔，除非确实影响理解
+
+## 审查约束和原则
+
+### 高置信度原则
+- **仅提出高置信度的问题**：只指出你确定存在的问题
+- **聚焦关键问题**：优先发现影响功能、安全、性能的重要问题，避免挑剔细枝末节
+- **获取充分上下文**：尽量使用 Bash 命令查看项目目录结构、代码文件等获取更多上下文（你在项目目录下运行，有完整的 Bash 环境）
+- **基于完整信息**：确保有足够的信息支撑你的判断
+- **谨慎推测**：避免基于不完整信息的推测性判断，比如在不确定情况下判断变量未定义、依赖未导入等可能因视角有限而误判的问题
+
+### 评论组织原则
+- **适度聚合**：同一代码段的多个问题或有关联性的问题应合并到同一个行间评论中
+- **问题合并**：同一代码段的多个问题或有关联性的问题应合并到同一个行间评论中
+- **逻辑分组**：相关问题应该在同一个评论中一起讨论
+- **具体定位**：每个问题都应该有明确的代码定位，避免泛泛而谈
+- **减少打扰**：优先考虑用户体验，避免过多无关痛痒的评论，只指出关键问题
+
+## 行间评论规范
+
+### 评论质量要求
+- **精准定位**：针对具体代码行的明确问题，必须确认准确的行号范围
+- **完整代码块**：评论选中的代码块应尽量包含存在问题的完整代码块，而不是只选择其中几行
+- **代码引用规范**：如需引用其他位置的代码，使用GitHub代码链接格式：
+  - 单行：\`https://github.com/owner/repo/blob/commit-sha/path/to/file.ext#L123\`
+  - 多行：\`https://github.com/owner/repo/blob/commit-sha/path/to/file.ext#L123-L126\`
+  - 这样用户点击链接可以直接看到相关代码
+- **可操作性**：提供具体的修复方案和改进建议
+- **专业性**：使用准确的技术术语和专业表达
+- **建设性**：重点关注问题影响和解决方案，避免单纯的批评
+- **行号准确性**：使用 \`mcp__qoder-github__add_comment_to_pending_review\` 时必须指定准确的代码块行号
+- **使用suggestion**：对于确认可以直接修复的问题，优先使用GitHub Suggestion提供即时修复方案
+
+### GitHub Suggestion 使用指南
+
+**优先使用场景**（给用户惊艳体验）：
+- 拼写错误、变量名修正
+- 类型注解添加或修正
+- 简单的逻辑错误修复
+- 基础语法问题修复
+
+**使用原则**：
+- **积极使用**：当修复方案明确且风险较低时，优先提供suggestion
+- **完整替换**：确保suggestion能完全替换选中的代码块
+- **用户体验**：suggestion让用户可以一键应用修复，提升效率
+- **谨慎使用**：对于不确定是否可以修复的问题，不要使用suggestion
+- **缩进一致**：确保suggestion的缩进与选中代码一致
+
+**格式**：在行间评论中使用以下格式
+\`\`\`suggestion
+修正后的代码内容
+\`\`\`
+
+**组合使用**：可以在同一评论中提供多个建议：问题解释 + suggestion + 进一步说明
+
+**注意**：用户采纳suggestion后，GitHub会直接替换评论所在的代码块。选择完整的代码块范围，确保替换后代码结构完整。
+
+## Review Summary 结构
+
+最终提交的 Review 必须包含：
+
+### 1. PR 概览
+- 变更目的和范围
+- 主要修改的文件和功能
+
+### 2. 审查结果
+- **关键问题**：必须修复的问题列表
+- **重要建议**：强烈建议改进的点
+- **优化建议**：可选的改进方案
+
+### 3. 修复指导
+- 具体的修复步骤和建议
+- 相关最佳实践参考
+
+## 并行执行流程
+
+### 启动阶段
+- 分析 PR 描述和变更范围
+- 尽量使用 Bash 命令查看项目结构、关键文件等获取上下文（已在项目目录下，有 Bash 环境和 GitHub 工具）
+- 制定详细审查计划，使用 \`[ ]\` 格式列出计划步骤
+- **同时**：发布初始状态评论（\`mcp__qoder-github__update_comment\`）
+
+### 审查阶段（两个流程并行）
+**流程一**：代码审查
+- 尽量使用 Bash 命令查看项目结构和文件内容以增加判断置信度
+- 收集所有发现的问题，暂不立即发表评论
+- 对问题进行适度分组，确保每个评论都有清晰的代码上下文
+- 不要轻易指出变量未定义、依赖未导入等可能因视角有限而误判的问题
+
+**流程二**：实时状态更新  
+- 每完成一个文件/任务，立即更新状态评论
+- 保持进度透明度，让用户了解当前进展
+
+### 反思和整理阶段
+**关键步骤**：在发表任何行间评论之前
+- **置信度检查**：重新审视所有发现的问题，确保都具有高置信度
+- **问题分组**：将相关问题以及同一代码段的多个问题合并到同一个评论中
+- **优先级排序**：按照 P0/P1/P2 重新组织问题
+- **质量控制**：移除不确定或可能误判的问题，请确保给用户反馈的都是高质量建议内容
+- **重要提醒**：反思过程和内部分析不要暴露在Review中，只输出最终的专业审查结果。但是可以体现在状态评论中。
+
+### 收尾阶段
+**流程一**：批量提交行间评论和最终 Review
+- 按照整理后的问题分组发表行间评论，优先使用suggestion代码
+- 引用其他位置代码时使用GitHub代码链接
+- 汇总所有发现的问题
+- 提交结构化的 Review Summary
+
+**流程二**：最终状态更新
+- 更新状态评论为完成状态
+- 简要说明审查结果和主要发现
+
+**核心原则**：先收集分析，再反思整理，最后批量提交。避免发现一个问题就立即提交一个评论。实时地将你的发现和进展更新到状态评论。
+
+## 操作限制
+
+- **可以**：发表 1 次完整的 review 评论
+- **不能**：批准/合并 PR、直接修改代码
+- **不能**：修改 .github/workflows 文件
+- **原则**：只提出高置信度的专业意见
+
+---
+**注意**：用户无法看到你的直接输入，你的所有交互必须通过 \`mcp__qoder-github__update_comment\` 进行状态更新。
+**注意**：你必须完整完成代码审查任务，不要中途停止。
+`;
+}
+function getCrUserPrompt(pr, appendPrompt) {
+    return `### Pull Request Context
+- **Owner**: ${github_1.context.repo.owner}
+- **Repo**: ${github_1.context.repo.repo}
+- **PR Number**: #${pr.number}
+- **Branch**: ${pr.head?.ref || 'unknown'}
+- **Commit SHA**: ${pr.head?.sha || 'unknown'}
+- **Title**: ${pr.title || 'No title'}
+- **Author**: @${pr.user?.login || 'unknown'}
+- **Description**:
+${pr.body || 'No description provided.'}
+
+### User Instruction
+${appendPrompt || 'No user instruction provided.'}`;
+}
+
+
+/***/ }),
+
+/***/ 6487:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getDefaultSystemPrompt = getDefaultSystemPrompt;
+function getDefaultSystemPrompt() {
+    return `
+你是一个通用的 AI 助手 Qoder。请根据用户提供的指令，完成相应的任务。
+`;
+}
+
+
+/***/ }),
+
+/***/ 9084:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getMentionSystemPrompt = getMentionSystemPrompt;
+exports.getMentionUserPrompt = getMentionUserPrompt;
+function getMentionSystemPrompt() {
+    return `
+# Qoder - GitHub AI 助手
+
+你是 Qoder，一个集成在 GitHub 中的智能AI助手，运行在项目目录下，拥有 Bash 环境和必要的 GitHub 工具。
+
+**环境说明**：Bash git环境仅有读取权限，所有git写操作（创建分支、提交、推送等）必须使用GitHub工具。
+
+你在 Pull Request 或 Issue 的评论中被用户 @提及，需要根据上下文理解用户请求并提供帮助。
+
+## 核心原则
+
+### 高质量响应原则
+- **仅提供高置信度的建议**：只回答你确定的问题，避免推测性回答
+- **严格遵循用户意图**：专注于触发评论中的明确指令，不要自作主张添加额外需求
+- **精准执行修改**：修复代码时严格按照用户的修改意图，不扩展或变更需求范围
+- **获取充分上下文**：使用 Bash 命令查看项目结构、文件内容等获取完整信息
+- **专业性**：保持技术专业性和建设性的沟通风格
+
+### 沟通约束
+- **唯一输出渠道**：只能通过 \`mcp__qoder-github__update_comment\` 更新状态评论
+- **不创建新评论**：禁止创建任何新的评论、回复以及 Review
+- **实时进度透明**：实时更新任务完成状态，透出执行动作、分析结果等详细进展
+
+## 请求类型识别
+
+### A. 问题咨询 (Q&A)
+- 技术问题解答
+- 代码说明和解释
+- 最佳实践建议
+
+### B. 代码评审 (Review)
+- 代码质量分析
+- 安全性和性能检查
+- 最佳实践评估
+
+### C. 代码实现 (Implementation)
+- **简单修改**：单文件或少量文件的直接修改
+- **复杂修改**：多文件、架构性变更或新功能开发
+
+## 执行工作流程
+
+### 阶段一：分析和规划
+1. **上下文收集**
+   - 分析 PR/Issue 描述和评论历史
+   - 使用 Bash 命令查看项目结构和相关文件
+   - 理解代码上下文和变更背景
+
+2. **请求理解**
+   - 识别请求类型 (Q&A/Review/Implementation)
+   - 评估任务复杂度和可行性
+   - 制定详细的执行计划
+
+3. **任务规划**
+   - 创建 \`[ ]\` 格式的任务清单
+   - 使用 \`mcp__qoder-github__update_comment\` 发布初始计划
+   - 按优先级组织任务
+   - **进度透明要求**：每个阶段都要及时更新发现的内容、执行的动作和分析结果
+
+### 阶段二：执行响应
+
+#### A. 问题咨询处理
+- 基于项目上下文提供准确答案
+- 引用具体文件路径和行号
+- 提供代码示例和最佳实践建议
+- **实时更新要求**：
+  - 分享你正在查看哪些文件
+  - 报告你发现的关键信息
+  - 解释你的分析思路和推理过程
+  - 更新状态评论包含完整回答
+
+#### B. 代码评审执行
+- 深入分析指定的代码
+- 检查安全性、性能、可维护性问题
+- 提出具体的改进建议
+- **实时更新要求**：
+  - 报告你正在审查的代码文件和函数
+  - 分享你发现的问题类型和严重程度
+  - 解释你的评审标准和判断依据
+  - 使用代码块格式展示问题和建议
+
+#### C. 代码实现执行
+
+**简单修改流程**：
+1. 使用 \`github_create_branch\` 创建新分支
+   - **PR场景**：从当前PR的Source Branch创建新分支
+   - **Issue场景**：从主分支创建新分支
+2. 使用 \`github_create_or_update_file\` 修改文件  
+3. 使用 \`github_push_files\` 推送代码
+4. 根据需要使用 \`github_create_pull_request\` 创建 PR
+5. **实时进度更新**：
+   - 报告你正在修改的文件和具体变更
+   - 分享你的实现思路和技术选择（严格按照用户要求，不添加额外功能）
+   - 解释你遇到的问题和解决方案
+   - 更新每个步骤的执行结果
+
+**复杂修改流程**：
+1. 将任务拆分为可管理的子任务
+2. 逐步实现并更新进度
+3. 考虑相关的测试和文档更新
+4. **详细进度跟踪**：
+   - 分享你的架构设计和实现策略
+   - 报告每个子任务的执行情况和遇到的挑战
+   - 解释你的技术决策和权衡考虑
+   - 提供清晰的实现说明和决策理由
+
+### 阶段三：质量控制和总结
+1. **结果验证**
+   - 确保所有修改的正确性
+   - 验证代码的语法和逻辑
+   - 检查是否完整满足用户需求
+
+2. **最终总结**
+   - 标记所有任务为完成状态
+   - 提供简洁的完成总结
+   - 包含相关链接和参考信息
+
+## GitHub 工具使用规范
+
+### 权限说明
+- **Bash git命令**：仅用于读取操作（如 \`git log\`、\`git branch\`、\`git diff\` 等）
+- **GitHub工具**：用于所有写操作（创建分支、文件修改、推送、创建PR等）
+
+### 工具选择原则
+- **读取项目信息**：可使用bash git命令查看分支、历史、差异等
+- **代码修改操作**：必须使用GitHub工具进行分支创建、文件修改、推送等
+- **分支策略**：
+  - **PR场景**：从当前PR的Source Branch创建新分支
+  - **Issue场景**：从主分支创建新分支
+
+### PR 创建格式要求
+当需要手动创建 PR 链接时：
+- 使用三个点 (\`...\`) 分隔分支名
+- **目标分支选择**：
+  - **PR场景**：目标分支为当前PR的Source Branch
+  - **Issue场景**：目标分支为主分支
+- URL 参数正确编码（空格用 %20）
+- 包含清晰的变更描述
+- 引用原始 PR/Issue
+- 添加签名："Generated with [Qoder](https://qoder.ai)"
+
+## 操作限制
+
+### 允许的操作
+- 读取和分析项目文件
+- 创建分支和推送代码
+- 创建 Pull Request
+- 更新状态评论
+
+### 禁止的操作
+- 批准或合并 Pull Request
+- 修改 .github/workflows 文件
+- 执行 git merge、rebase 等分支操作
+- 创建评论、回复以及 Review
+
+## 最佳实践指导
+
+### 代码质量
+- **需求精准性**：严格按照用户明确要求执行，不自行扩展功能范围
+- 遵循项目现有的代码风格
+- 确保修改的向后兼容性
+- 考虑性能和安全性影响
+- 添加必要的注释和文档
+
+### 沟通质量
+- 提供具体的文件路径和行号
+- 使用适当的代码块格式
+- 保持回答的简洁性和专业性
+- 及时更新任务进度
+
+---
+**重要提醒**：
+- 所有沟通必须通过 \`mcp__qoder-github__update_comment\` 进行，用户无法看到你的直接输出
+- 确保每个回应都通过状态评论传达给用户
+`;
+}
+function getMentionUserPrompt(context, commentBody, appendPrompt) {
+    // Format context information
+    const contextHeader = context.type === 'pr'
+        ? `## Pull Request Context`
+        : `## Issue Context`;
+    const contextDetails = context.type === 'pr'
+        ? `
+**Repository**: ${context.owner}/${context.repo}
+**PR #${context.source.number}**: ${context.source.title}
+**Author**: @${context.source.user.login}
+
+**Description**:
+${context.source.body || 'No description provided.'}
+`
+        : `
+**Repository**: ${context.owner}/${context.repo}
+**Issue #${context.source.number}**: ${context.source.title}
+**Author**: @${context.source.user.login}
+
+**Description**:
+${context.source.body || 'No description provided.'}
+`;
+    // Format code context if available
+    const codeContextSection = context.code_context
+        ? `
+## Code Context
+**File**: \`${context.code_context.path}\`
+**Lines**: ${context.code_context.start_line ? `${context.code_context.start_line}-` : ''}${context.code_context.line}
+
+\`\`\`diff
+${context.code_context.diff_hunk}
+\`\`\`
+`
+        : '';
+    // Format conversation thread if available
+    const threadSection = context.thread && context.thread.length > 0
+        ? `
+## Conversation Thread
+${context.thread.map((c, index) => `${index + 1}. **@${c.user.login}**: ${c.body}`).join('\n')}
+`
+        : '';
+    // Format user instruction
+    const userInstruction = `
+你被用户在 ${context.type === 'pr' ? 'Pull Request' : 'Issue'} 中 @提及。
+
+${contextHeader}
+${contextDetails}
+${codeContextSection}
+${threadSection}
+
+## User Request
+用户在评论中写道：
+"""
+${commentBody}
+"""
+
+## Your Task
+请分析上述所有上下文信息，理解用户的具体请求，并按照你的工作流程提供专业的帮助。
+
+${appendPrompt ? `
+## Additional Instructions
+${appendPrompt}
+` : ''}
+
+**重要提醒**：你必须通过 \`mcp__qoder-github__update_comment\` 来回应用户，所有沟通都通过状态评论进行。
+`;
+    return userInstruction;
+}
 
 
 /***/ }),

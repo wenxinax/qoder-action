@@ -1,0 +1,28 @@
+name: "Qoder Auto Review"
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  auto-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Run Qoder Auto Review"
+        uses: wenxinax/qoder-action@dev
+        with:
+          # Use the built-in Code Review scene.
+          scene: cr
+          qoder_user_info: ${{ secrets.QODER_USER_INFO }}
+          qoder_machine_id: ${{ secrets.QODER_MACHINE_ID }}
+
+          # (Optional) If you have specific review rules, add them here.
+          append_prompt: |
+            请使用中文输出结果。

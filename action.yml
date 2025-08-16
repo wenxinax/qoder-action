@@ -1,77 +1,66 @@
-# qoder-action/action.yml
 
-name: "Qoder Action"
-description: "An intelligent code assistant powered by the Qoder CLI."
-branding:
-  icon: "code"
-  color: "green"
+name: 'Qoder Action'
+description: 'A flexible and composable GitHub Action framework for qoder-cli.'
+author: 'qoder-ai'
 
-# ==================================
-# INPUTS
-# ==================================
 inputs:
-  trigger_on:
-    description: "Required. Defines the trigger mechanism. Must be one of: 'mention', 'event'."
+  scene:
+    description: |
+      The scenario for the action, determining built-in prompts and logic.
+      - `cr`: Code Review mode. Uses built-in prompts for code analysis. Allows customization via `append_prompt`.
+      - `mention`: Mention mode. Responds to user mentions in comments. Allows customization of reply style via `append_prompt`.
+      - `custom`: Custom mode. Requires a `prompt` to define the task, and allows a custom `system_prompt`.
     required: true
-  mention_phrase:
-    description: "The phrase to look for in comments when trigger_on is 'mention'."
+    default: 'cr'
+
+  append_prompt:
+    description: 'For `cr` or `mention` scenes. Appends additional instructions to the built-in prompt.'
     required: false
-    default: "@qoder"
 
   prompt:
-    description: "The instruction for Qoder. Required when trigger_on is 'event'."
+    description: "Required for `custom` scene. A detailed prompt that tells qoder what to do."
     required: false
 
-  ## Authentication & Configuration
-  dashscope_api_key:
-    description: "Required. The authentication token for the Qoder service."
+
+  qoder_user_info:
+    description: 'User information for Qoder authentication.'
     required: true
-  github_token:
-    description: "The GitHub token for API operations."
-    required: false
-    default: ${{ github.token }}
+  qoder_machine_id:
+    description: 'Machine ID for Qoder authentication.'
+    required: true
 
-  ## Execution Control
-  timeout_minutes:
-    description: "Timeout in minutes for the action's execution."
-    required: false
-    default: "60"
-
-# ==================================
-# OUTPUTS
-# ==================================
-
-
-# ==================================
-# EXECUTION STEPS
-# ==================================
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - name: "Dispatch Qoder Task"
+    - name: Dispatcher
       id: dispatcher
+      # Execute the compiled dispatcher script directly instead of calling the action recursively
+      run: node ${{ github.action_path }}/dist/dispatcher.js
       shell: bash
-      run: node ${GITHUB_ACTION_PATH}/dist/dispatcher.js
       env:
-        INPUT_TRIGGER_ON: ${{ inputs.trigger_on }}
-        INPUT_MENTION_PHRASE: ${{ inputs.mention_phrase }}
+        INPUT_SCENE: ${{ inputs.scene }}
+        INPUT_APPEND_PROMPT: ${{ inputs.append_prompt }}
         INPUT_PROMPT: ${{ inputs.prompt }}
-        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
 
-    - name: "Run Qoder"
-      id: qoder-run
-      if: steps.dispatcher.outputs.should_run == 'true'
-      uses: ./qoder-core-action
+    - name: Run Qoder Core Action
+      id: qoder
+      uses: wenxinax/qoder-core-action@main
       with:
-        prompt_file_path: ${{ steps.dispatcher.outputs.prompt_file_path }}
-        dashscope_api_key: ${{ inputs.dashscope_api_key }}
-        # system_prompt: 'Optional: Add a system prompt here if needed'
+        prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
+        qoder_user_info: ${{ inputs.qoder_user_info }}
+        qoder_machine_id: ${{ inputs.qoder_machine_id }}
 
-    - name: "Finalize GitHub Operations"
-      if: always() && steps.dispatcher.outputs.should_run == 'true'
+    - name: Finalize
+      id: finalize
+      if: always()
+      # Execute the compiled finalize script directly
+      run: node ${{ github.action_path }}/dist/finalize.js
       shell: bash
-      run: node ${GITHUB_ACTION_PATH}/dist/finalize.js
       env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
-        COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
-        RESULT_CONTENT: ${{ steps.qoder-run.outputs.result_content }}
+        INPUT_SCENE: ${{ inputs.scene }}
+        INPUT_COMMENT_ID: ${{ steps.dispatcher.outputs.comment_id }}
+        INPUT_JOB_STATUS: ${{ job.status }}
+        INPUT_QODER_RESULT: ${{ steps.qoder.outputs.result }}
+        INPUT_GITHUB_TOKEN: ${{ steps.dispatcher.outputs.github_token }}
+        INPUT_COMMENT_TYPE: ${{ steps.dispatcher.outputs.comment_type }}
