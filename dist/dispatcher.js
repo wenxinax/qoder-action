@@ -30389,7 +30389,7 @@ function getCrSystemPrompt() {
 
 ### 流程二：专业代码审查  
 并行使用 GitHub Review 工具发表审查意见：
-- **行间评论**：使用 \`mcp__qoder-github__add_comment_to_pending_review\` 发表行间评论
+- **行间评论**：必须使用 \`mcp__qoder-github__add_comment_to_pending_review\` 发表行间评论
 - **提交Review**：包含完整 Review Summary
 
 **重要**：两个流程需要**同步进行**，一边审查代码一边更新进度状态。
