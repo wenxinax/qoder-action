@@ -24,6 +24,11 @@ function updateSection(originalBody: string, section: 'HEADER' | 'BODY' | 'FOOTE
   return `${before}\n${newContent}\n${after}`;
 }
 
+// Helper function to get workflow run URL
+function getWorkflowUrl(context: any): string {
+  return `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+}
+
 async function run(): Promise<void> {
   try {
     const githubToken = core.getInput('github_token', { required: true });
@@ -68,17 +73,19 @@ async function run(): Promise<void> {
 
     let bodyContent: string | null = null;
     let footerContent: string;
-    const checkRunUrl = `${source.html_url}/checks?check_run_id=${context.runId}`;
+    
+    // Get the specific job URL instead of just check run URL
+    const jobUrl = getWorkflowUrl(context);
 
     if (jobStatus === 'failure' || jobStatus === 'cancelled') {
       const status = jobStatus === 'failure' ? 'failed' : 'cancelled';
-      bodyContent = `❌ **The AI task for the '${scene}' scene has ${status}.**\n\nPlease review the [action logs](${checkRunUrl}) for details.`;
-      footerContent = `*Workflow ${status}.*`;
+      bodyContent = `❌ **The task has ${status}.**\n\nPlease review the [action logs](${jobUrl}) for details.`;
+      footerContent = `*Workflow ${status}. [View logs](${jobUrl})*`;
     } else {
-      footerContent = `*Workflow finished successfully. You can view the full execution details in the [action logs](${checkRunUrl}).*`;
+      footerContent = `*Task completed successfully. [View logs](${jobUrl})*`;
 
       // For mention scene, the body is the result itself.
-      if (scene === 'mention') {
+      if (scene === 'mention' && qoderResult) {
         bodyContent = qoderResult;
       }
     }

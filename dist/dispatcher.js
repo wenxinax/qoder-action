@@ -30085,7 +30085,8 @@ ${(0, cr_1.getCrSystemPrompt)()}`;
                     throw new Error("Action currently only supports pull_request events.");
                 }
                 const runId = context.runId;
-                const checkRunUrl = `${pr.html_url}/checks?check_run_id=${runId}`;
+                const workflowUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
+                // Enhanced status comment for CR scene
                 const welcomeMessage = `<!-- QODER_HEADER_START -->
 👋 Hello! I'm Qoder, your AI code assistant.
 <!-- QODER_HEADER_END -->
@@ -30093,11 +30094,11 @@ ${(0, cr_1.getCrSystemPrompt)()}`;
 ---
 
 <!-- QODER_BODY_START -->
-⏳ I'm analyzing this pull request based on the **${scene}** scene. I will post my findings shortly.
+⏳ I'm analyzing this pull request for code review. I will post my findings shortly.
 <!-- QODER_BODY_END -->
 
 <!-- QODER_FOOTER_START -->
-*You can view the live progress in the [action logs](${checkRunUrl}).*
+*You can monitor the progress in the [action logs](${workflowUrl})*
 <!-- QODER_FOOTER_END -->`;
                 const { data: comment } = await octokit.rest.issues.createComment({
                     ...context.repo,
@@ -30200,19 +30201,19 @@ ${(0, mention_1.getMentionSystemPrompt)()}`;
                     }
                 }
                 const runId = context.runId;
-                const checkRunUrl = `${source.html_url}/checks?check_run_id=${runId}`;
+                const workflowUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
                 const welcomeMessage = `<!-- QODER_HEADER_START -->
-👋 Hello! I'm Qoder, your AI code assistant.
+👋 Hello! I'm Qoder, your AI assistant.
 <!-- QODER_HEADER_END -->
 
 ---
 
 <!-- QODER_BODY_START -->
-⏳ I'm analyzing your request... I will post my findings shortly.
+⏳ I'm analyzing your request... I will post my response shortly.
 <!-- QODER_BODY_END -->
 
 <!-- QODER_FOOTER_START -->
-*You can view the live progress in the [action logs](${checkRunUrl}).*
+*You can monitor the progress in the [action logs](${workflowUrl})*
 <!-- QODER_FOOTER_END -->`;
                 if (context.eventName === 'pull_request_review_comment') {
                     const { data: replyComment } = await octokit.rest.pulls.createReplyForReviewComment({
@@ -30261,7 +30262,8 @@ ${(0, custom_1.getDefaultSystemPrompt)()}`;
                     throw new Error("Action currently only supports pull_request events.");
                 }
                 const runId = context.runId;
-                const checkRunUrl = `${pr.html_url}/checks?check_run_id=${runId}`;
+                const workflowUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
+                // Enhanced status comment for custom scene
                 const welcomeMessage = `<!-- QODER_HEADER_START -->
 👋 Hello! I'm Qoder, your AI code assistant.
 <!-- QODER_HEADER_END -->
@@ -30269,11 +30271,11 @@ ${(0, custom_1.getDefaultSystemPrompt)()}`;
 ---
 
 <!-- QODER_BODY_START -->
-⏳ I'm analyzing this pull request based on the **custom** scene. I will post my findings shortly.
+⏳ I'm executing your custom task. I will post the results shortly.
 <!-- QODER_BODY_END -->
 
 <!-- QODER_FOOTER_START -->
-*You can view the live progress in the [action logs](${checkRunUrl}).*
+*You can monitor the progress in the [action logs](${workflowUrl})*
 <!-- QODER_FOOTER_END -->`;
                 const { data: comment } = await octokit.rest.issues.createComment({
                     ...context.repo,
