@@ -133,8 +133,6 @@ async function run(): Promise<void> {
     let commentId: string;
     let commentType: 'issue' | 'review' = 'issue';
 
-    const subagentTools = 'Glob,Grep,read,LS,WebFetch,WebSearch,Bash,mcp*';
-
     // 3. Scene-based Logic
     core.info(`Processing scene: ${scene}`);
     switch (scene) {
@@ -145,7 +143,7 @@ async function run(): Promise<void> {
         const crAgentContent = `--- 
 name: github-action-pr-review
 description: 负责github action pr review
-tools: ${subagentTools}
+tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder-github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__create_pending_pull_request_review, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__submit_pending_pull_request_review, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__search_code
 ---
 ${getCrSystemPrompt()}`;
         fs.writeFileSync(path.join(agentsDir, 'github-action-pr-review.md'), crAgentContent);
@@ -196,7 +194,7 @@ ${originalUserPrompt}
         const mentionAgentContent = `--- 
 name: github-action-mention-handler
 description: 负责处理在github pr/issue中的@mention
-tools: ${subagentTools}
+tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder-github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__update_issue, mcp__github__create_pull_request, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__create_branch, mcp__github__create_or_update_file, mcp__github__delete_file, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__push_files, mcp__github__search_code
 ---
 ${getMentionSystemPrompt()}`;
         fs.writeFileSync(path.join(agentsDir, 'github-action-mention-handler.md'), mentionAgentContent);
@@ -341,7 +339,7 @@ ${originalUserPrompt}
         const customAgentContent = `--- 
 name: github-action-custom-task
 description: 在 github 环境执行用户定义的自定义任务
-tools: ${subagentTools}
+tools: *
 ---
 ${getDefaultSystemPrompt()}`;
         fs.writeFileSync(path.join(agentsDir, 'github-action-custom-task.md'), customAgentContent);
