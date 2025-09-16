@@ -31,7 +31,7 @@ async function setupCli(url: string, dest: string): Promise<void> {
 async function run(): Promise<void> {
   try {
     // --- 1. Get Inputs ---
-    const cliDownloadUrl = 'https://lingma-agents-public.oss-cn-hangzhou.aliyuncs.com/qoder-cli/qoder-cli-linux-amd64';
+    const cliDownloadUrl = 'https://qcli-aone.oss-cn-hangzhou.aliyuncs.com/github/qoder-cli';
     const cliPath = path.join(process.cwd(), 'qoder-cli');
     const prompt = core.getInput('prompt');
     const promptPath = core.getInput('prompt_path');
