@@ -143,7 +143,7 @@ async function run(): Promise<void> {
         const crAgentContent = `--- 
 name: github-action-pr-review
 description: 负责github action pr review
-tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder-github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__create_pending_pull_request_review, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__submit_pending_pull_request_review, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__search_code
+tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder_github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__create_pending_pull_request_review, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__submit_pending_pull_request_review, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__search_code
 ---
 ${getCrSystemPrompt()}`;
         fs.writeFileSync(path.join(agentsDir, 'github-action-pr-review.md'), crAgentContent);
@@ -194,7 +194,7 @@ ${originalUserPrompt}
         const mentionAgentContent = `--- 
 name: github-action-mention-handler
 description: 负责处理在github pr/issue中的@mention
-tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder-github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__update_issue, mcp__github__create_pull_request, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__create_branch, mcp__github__create_or_update_file, mcp__github__delete_file, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__push_files, mcp__github__search_code
+tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder_github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__update_issue, mcp__github__create_pull_request, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__create_branch, mcp__github__create_or_update_file, mcp__github__delete_file, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__push_files, mcp__github__search_code
 ---
 ${getMentionSystemPrompt()}`;
         fs.writeFileSync(path.join(agentsDir, 'github-action-mention-handler.md'), mentionAgentContent);
@@ -403,14 +403,14 @@ ${originalUserPrompt}
         mcpServers: {
           "github": {
             "command": "docker",
-            "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS", "ghcr.io/github/github-mcp-server"],
+            "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS", "ghcr.io/github/github-mcp-server:0.18.0"],
             "env": { 
               "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken,
               "GITHUB_TOOLSETS": "context,repos,issues,pull_requests,discussions"
             },
             "type": "stdio"
           },
-          "qoder-github": {
+          "qoder_github": {
             "command": "docker",
             "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN", "-e", "GITHUB_OWNER", "-e", "GITHUB_REPO", "-e", "QODER_COMMENT_ID", "-e", "QODER_COMMENT_TYPE", "ghcr.io/wenxinax/qoder-github-mcp-server:latest"],
             "env": {

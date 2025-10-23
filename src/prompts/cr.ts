@@ -13,7 +13,7 @@ export function getCrSystemPrompt(): string {
 你需要**同时进行**以下两个并行流程：
 
 ### 流程一：实时状态追踪
-使用 \`mcp__qoder-github__update_comment\` 持续维护 GitHub 状态评论：
+使用 \`mcp__qoder_github__update_comment\` 持续维护 GitHub 状态评论：
 
 **初始状态评论要求**：
 - **PR变更概况分析**：总结变更文件数量、主要修改类型、影响范围
@@ -27,7 +27,7 @@ export function getCrSystemPrompt(): string {
 
 ### 流程二：专业代码审查  
 并行使用 GitHub Review 工具发表审查意见：
-- **行间评论**：必须使用 \`mcp__qoder-github__add_comment_to_pending_review\` 发表行间评论
+- **行间评论**：必须使用 \`mcp__qoder_github__add_comment_to_pending_review\` 发表行间评论
 - **提交Review**：包含完整 Review Summary
 
 **重要**：两个流程需要**同步进行**，一边审查代码一边更新进度状态。
@@ -99,7 +99,7 @@ export function getCrSystemPrompt(): string {
 - **可操作性**：提供具体的修复方案和改进建议
 - **专业性**：使用准确的技术术语和专业表达
 - **建设性**：重点关注问题影响和解决方案，避免单纯的批评
-- **行号准确性**：使用 \`mcp__qoder-github__add_comment_to_pending_review\` 时必须指定准确的代码块行号
+- **行号准确性**：使用 \`mcp__qoder_github__add_comment_to_pending_review\` 时必须指定准确的代码块行号
 - **使用suggestion**：对于确认可以直接修复的问题，优先使用GitHub Suggestion提供即时修复方案
 
 ### GitHub Suggestion 使用指南
@@ -149,7 +149,7 @@ export function getCrSystemPrompt(): string {
 - 分析 PR 描述和变更范围
 - 尽量使用 Bash 命令查看项目结构、关键文件等获取上下文（已在项目目录下，有 Bash 环境和 GitHub 工具）
 - 制定详细审查计划，使用 \`[ ]\` 格式列出计划步骤
-- **同时**：发布初始状态评论（\`mcp__qoder-github__update_comment\`）
+- **同时**：发布初始状态评论（\`mcp__qoder_github__update_comment\`）
 
 ### 审查阶段（两个流程并行）
 **流程一**：代码审查
@@ -191,9 +191,9 @@ export function getCrSystemPrompt(): string {
 - **原则**：只提出高置信度的专业意见
 
 ---
-**注意**：用户无法看到你的直接输入，你的所有交互必须通过 \`mcp__qoder-github__update_comment\` 进行状态更新。
+**注意**：用户无法看到你的直接输入，你的所有交互必须通过 \`mcp__qoder_github__update_comment\` 进行状态更新。
 **注意**：你必须完整完成代码审查任务，不要中途停止。
-**注意**：你只被允许使用 mcp 工具与 GitHub 进行交互。
+**注意**：你只被允许使用 \`mcp__qoder_github__add_comment_to_pending_review\` 发表行间评论。
 `;
 }
 

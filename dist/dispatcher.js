@@ -30074,7 +30074,7 @@ async function run() {
                 const crAgentContent = `--- 
 name: github-action-pr-review
 description: 负责github action pr review
-tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder-github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__create_pending_pull_request_review, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__submit_pending_pull_request_review, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__search_code
+tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder_github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__create_pending_pull_request_review, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__submit_pending_pull_request_review, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__search_code
 ---
 ${(0, cr_1.getCrSystemPrompt)()}`;
                 fs.writeFileSync(path.join(agentsDir, 'github-action-pr-review.md'), crAgentContent);
@@ -30121,7 +30121,7 @@ ${originalUserPrompt}
                 const mentionAgentContent = `--- 
 name: github-action-mention-handler
 description: 负责处理在github pr/issue中的@mention
-tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder-github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__update_issue, mcp__github__create_pull_request, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__create_branch, mcp__github__create_or_update_file, mcp__github__delete_file, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__push_files, mcp__github__search_code
+tools: Glob, Grep, LS, WebFetch, WebSearch, Bash, mcp__qoder_github*, mcp__github__get_issue, mcp__github__get_issue_comments, mcp__github__update_issue, mcp__github__create_pull_request, mcp__github__get_pull_request, mcp__github__get_pull_request_comments, mcp__github__get_pull_request_files, mcp__github__get_pull_request_status, mcp__github__create_branch, mcp__github__create_or_update_file, mcp__github__delete_file, mcp__github__get_commit, mcp__github__get_file_contents, mcp__github__list_branches, mcp__github__list_commits, mcp__github__push_files, mcp__github__search_code
 ---
 ${(0, mention_1.getMentionSystemPrompt)()}`;
                 fs.writeFileSync(path.join(agentsDir, 'github-action-mention-handler.md'), mentionAgentContent);
@@ -30308,14 +30308,14 @@ ${originalUserPrompt}
             mcpServers: {
                 "github": {
                     "command": "docker",
-                    "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS", "ghcr.io/github/github-mcp-server"],
+                    "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS", "ghcr.io/github/github-mcp-server:0.18.0"],
                     "env": {
                         "GITHUB_PERSONAL_ACCESS_TOKEN": githubToken,
                         "GITHUB_TOOLSETS": "context,repos,issues,pull_requests,discussions"
                     },
                     "type": "stdio"
                 },
-                "qoder-github": {
+                "qoder_github": {
                     "command": "docker",
                     "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN", "-e", "GITHUB_OWNER", "-e", "GITHUB_REPO", "-e", "QODER_COMMENT_ID", "-e", "QODER_COMMENT_TYPE", "ghcr.io/wenxinax/qoder-github-mcp-server:latest"],
                     "env": {
@@ -30376,7 +30376,7 @@ function getCrSystemPrompt() {
 你需要**同时进行**以下两个并行流程：
 
 ### 流程一：实时状态追踪
-使用 \`mcp__qoder-github__update_comment\` 持续维护 GitHub 状态评论：
+使用 \`mcp__qoder_github__update_comment\` 持续维护 GitHub 状态评论：
 
 **初始状态评论要求**：
 - **PR变更概况分析**：总结变更文件数量、主要修改类型、影响范围
@@ -30390,7 +30390,7 @@ function getCrSystemPrompt() {
 
 ### 流程二：专业代码审查  
 并行使用 GitHub Review 工具发表审查意见：
-- **行间评论**：必须使用 \`mcp__qoder-github__add_comment_to_pending_review\` 发表行间评论
+- **行间评论**：必须使用 \`mcp__qoder_github__add_comment_to_pending_review\` 发表行间评论
 - **提交Review**：包含完整 Review Summary
 
 **重要**：两个流程需要**同步进行**，一边审查代码一边更新进度状态。
@@ -30462,7 +30462,7 @@ function getCrSystemPrompt() {
 - **可操作性**：提供具体的修复方案和改进建议
 - **专业性**：使用准确的技术术语和专业表达
 - **建设性**：重点关注问题影响和解决方案，避免单纯的批评
-- **行号准确性**：使用 \`mcp__qoder-github__add_comment_to_pending_review\` 时必须指定准确的代码块行号
+- **行号准确性**：使用 \`mcp__qoder_github__add_comment_to_pending_review\` 时必须指定准确的代码块行号
 - **使用suggestion**：对于确认可以直接修复的问题，优先使用GitHub Suggestion提供即时修复方案
 
 ### GitHub Suggestion 使用指南
@@ -30512,7 +30512,7 @@ function getCrSystemPrompt() {
 - 分析 PR 描述和变更范围
 - 尽量使用 Bash 命令查看项目结构、关键文件等获取上下文（已在项目目录下，有 Bash 环境和 GitHub 工具）
 - 制定详细审查计划，使用 \`[ ]\` 格式列出计划步骤
-- **同时**：发布初始状态评论（\`mcp__qoder-github__update_comment\`）
+- **同时**：发布初始状态评论（\`mcp__qoder_github__update_comment\`）
 
 ### 审查阶段（两个流程并行）
 **流程一**：代码审查
@@ -30554,9 +30554,9 @@ function getCrSystemPrompt() {
 - **原则**：只提出高置信度的专业意见
 
 ---
-**注意**：用户无法看到你的直接输入，你的所有交互必须通过 \`mcp__qoder-github__update_comment\` 进行状态更新。
+**注意**：用户无法看到你的直接输入，你的所有交互必须通过 \`mcp__qoder_github__update_comment\` 进行状态更新。
 **注意**：你必须完整完成代码审查任务，不要中途停止。
-**注意**：你只被允许使用 mcp 工具与 GitHub 进行交互。
+**注意**：你只被允许使用 \`mcp__qoder_github__add_comment_to_pending_review\` 发表行间评论。
 `;
 }
 function getCrUserPrompt(pr, appendPrompt) {
@@ -30622,7 +30622,7 @@ function getMentionSystemPrompt() {
 - **专业性**：保持技术专业性和建设性的沟通风格
 
 ### 沟通约束
-- **唯一输出渠道**：只能通过 \`mcp__qoder-github__update_comment\` 更新状态评论
+- **唯一输出渠道**：只能通过 \`mcp__qoder_github__update_comment\` 更新状态评论
 - **不创建新评论**：禁止创建任何新的评论、回复以及 Review
 - **实时进度透明**：实时更新任务完成状态，透出执行动作、分析结果等详细进展
 
@@ -30657,7 +30657,7 @@ function getMentionSystemPrompt() {
 
 3. **任务规划**
    - 创建 \`[ ]\` 格式的任务清单
-   - 使用 \`mcp__qoder-github__update_comment\` 发布初始计划
+   - 使用 \`mcp__qoder_github__update_comment\` 发布初始计划
    - 按优先级组织任务
    - **进度透明要求**：每个阶段都要及时更新发现的内容、执行的动作和分析结果
 
@@ -30774,7 +30774,7 @@ function getMentionSystemPrompt() {
 
 ---
 **重要提醒**：
-- 所有沟通必须通过 \`mcp__qoder-github__update_comment\` 进行，用户无法看到你的直接输出
+- 所有沟通必须通过 \`mcp__qoder_github__update_comment\` 进行，用户无法看到你的直接输出
 - 确保每个回应都通过状态评论传达给用户
 `;
 }
@@ -30842,7 +30842,7 @@ ${appendPrompt ? `
 ${appendPrompt}
 ` : ''}
 
-**重要提醒**：你必须通过 \`mcp__qoder-github__update_comment\` 来回应用户，所有沟通都通过状态评论进行。
+**重要提醒**：你必须通过 \`mcp__qoder_github__update_comment\` 来回应用户，所有沟通都通过状态评论进行。
 `;
     return userInstruction;
 }

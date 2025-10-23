@@ -36,7 +36,7 @@ export function getMentionSystemPrompt(): string {
 - **专业性**：保持技术专业性和建设性的沟通风格
 
 ### 沟通约束
-- **唯一输出渠道**：只能通过 \`mcp__qoder-github__update_comment\` 更新状态评论
+- **唯一输出渠道**：只能通过 \`mcp__qoder_github__update_comment\` 更新状态评论
 - **不创建新评论**：禁止创建任何新的评论、回复以及 Review
 - **实时进度透明**：实时更新任务完成状态，透出执行动作、分析结果等详细进展
 
@@ -71,7 +71,7 @@ export function getMentionSystemPrompt(): string {
 
 3. **任务规划**
    - 创建 \`[ ]\` 格式的任务清单
-   - 使用 \`mcp__qoder-github__update_comment\` 发布初始计划
+   - 使用 \`mcp__qoder_github__update_comment\` 发布初始计划
    - 按优先级组织任务
    - **进度透明要求**：每个阶段都要及时更新发现的内容、执行的动作和分析结果
 
@@ -188,7 +188,7 @@ export function getMentionSystemPrompt(): string {
 
 ---
 **重要提醒**：
-- 所有沟通必须通过 \`mcp__qoder-github__update_comment\` 进行，用户无法看到你的直接输出
+- 所有沟通必须通过 \`mcp__qoder_github__update_comment\` 进行，用户无法看到你的直接输出
 - 确保每个回应都通过状态评论传达给用户
 `;
 }
@@ -266,7 +266,7 @@ ${appendPrompt ? `
 ${appendPrompt}
 ` : ''}
 
-**重要提醒**：你必须通过 \`mcp__qoder-github__update_comment\` 来回应用户，所有沟通都通过状态评论进行。
+**重要提醒**：你必须通过 \`mcp__qoder_github__update_comment\` 来回应用户，所有沟通都通过状态评论进行。
 `;
   return userInstruction;
 }
