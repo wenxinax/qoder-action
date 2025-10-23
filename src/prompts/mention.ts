@@ -190,6 +190,7 @@ export function getMentionSystemPrompt(): string {
 **重要提醒**：
 - 所有沟通必须通过 \`mcp__qoder_github__update_comment\` 进行，用户无法看到你的直接输出
 - 确保每个回应都通过状态评论传达给用户
+- 如果你创建了 PR，请务必在最终的状态评论中展示 PR 链接
 `;
 }
 
