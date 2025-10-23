@@ -30556,6 +30556,7 @@ function getCrSystemPrompt() {
 ---
 **注意**：用户无法看到你的直接输入，你的所有交互必须通过 \`mcp__qoder-github__update_comment\` 进行状态更新。
 **注意**：你必须完整完成代码审查任务，不要中途停止。
+**注意**：你只被允许使用 mcp 工具与 GitHub 进行交互。
 `;
 }
 function getCrUserPrompt(pr, appendPrompt) {
