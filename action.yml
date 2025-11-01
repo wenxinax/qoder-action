@@ -24,10 +24,13 @@ inputs:
 
   qoder_user_info:
     description: 'User information for Qoder authentication.'
-    required: true
+    required: false
   qoder_machine_id:
     description: 'Machine ID for Qoder authentication.'
-    required: true
+    required: false
+  qoder_personal_access_token:
+    description: 'Personal access token for Qoder authentication.'
+    required: false
 
 runs:
   using: 'composite'
@@ -50,6 +53,7 @@ runs:
         prompt_path: ${{ steps.dispatcher.outputs.prompt_path }}
         qoder_user_info: ${{ inputs.qoder_user_info }}
         qoder_machine_id: ${{ inputs.qoder_machine_id }}
+        qoder_personal_access_token: ${{ inputs.qoder_personal_access_token }}
 
     - name: Finalize
       id: finalize

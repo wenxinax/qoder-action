@@ -35,15 +35,25 @@ async function run(): Promise<void> {
     const cliPath = path.join(process.cwd(), 'qoder-cli');
     const prompt = core.getInput('prompt');
     const promptPath = core.getInput('prompt_path');
-    const qoderUserInfo = core.getInput('qoder_user_info', { required: true });
-    const qoderMachineId = core.getInput('qoder_machine_id', { required: true });
+    const qoderUserInfo = core.getInput('qoder_user_info');
+    const qoderMachineId = core.getInput('qoder_machine_id');
+    const qoderPersonalAccessToken = core.getInput('qoder_personal_access_token');
     const logFilePath = './qoder.log';
 
-    const env = {
-      ...process.env,
-      QODER_USER_INFO: qoderUserInfo,
-      QODER_MACHINE_ID: qoderMachineId,
+    const env: Record<string, string> = {
+      ...process.env as Record<string, string>,
       QODER_MODEL: "auto",
+    };
+
+    // Add optional authentication parameters to environment
+    if (qoderUserInfo) {
+      env.QODER_USER_INFO = qoderUserInfo;
+    }
+    if (qoderMachineId) {
+      env.QODER_MACHINE_ID = qoderMachineId;
+    }
+    if (qoderPersonalAccessToken) {
+      env.QODER_PERSONAL_ACCESS_TOKEN = qoderPersonalAccessToken;
     };
 
     // Validate and get the prompt content
@@ -112,8 +122,15 @@ async function run(): Promise<void> {
     // --- 8. Execute qoder-cli ---
     core.info(`Starting qoder-cli process with args: ${args.join(' ')}`);
     core.info('Setting environment variables for qoder-cli:');
-    core.info(`- QODER_USER_INFO: ***`);
-    core.info(`- QODER_MACHINE_ID: ${qoderMachineId}`);
+    if (qoderUserInfo) {
+      core.info(`- QODER_USER_INFO: ***`);
+    }
+    if (qoderMachineId) {
+      core.info(`- QODER_MACHINE_ID: ${qoderMachineId}`);
+    }
+    if (qoderPersonalAccessToken) {
+      core.info(`- QODER_PERSONAL_ACCESS_TOKEN: ***`);
+    }
     core.info(`- QODER_MODEL: auto`)
 
     const qoderProcess = spawn(cliPath, args, { env });
