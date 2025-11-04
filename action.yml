@@ -1,6 +1,9 @@
 name: 'Qoder Action'
 description: 'Transparent launcher for qodercli in GitHub Actions'
-author: 'qoder-ai'
+
+branding:
+  icon: 'code'
+  color: 'green'
 
 inputs:
   prompt:
