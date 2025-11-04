@@ -1,0 +1,287 @@
+name: 'Qoder Action'
+description: 'Transparent launcher for qodercli in GitHub Actions'
+author: 'qoder-ai'
+
+inputs:
+  prompt:
+    description: 'Instructions for qodercli (passed to -p flag)'
+    required: false
+    default: ''
+  
+  flags:
+    description: |
+      Additional CLI arguments to pass to qodercli.
+      Each line should be a valid flag (e.g., --max-turns 10).
+      Multiple lines are supported.
+    required: false
+    default: ''
+  
+  qoder_personal_access_token:
+    description: 'Qoder personal access token for authentication'
+    required: true
+
+outputs:
+  output_file:
+    description: 'Path to file containing qodercli stdout output'
+    value: ${{ steps.run_cli.outputs.output_file }}
+  
+  error:
+    description: 'Error message from qodercli (if failed)'
+    value: ${{ steps.run_cli.outputs.error }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_FLAGS: ${{ inputs.flags }}
+        INPUT_TOKEN: ${{ inputs.qoder_personal_access_token }}
+      run: |
+        set -e
+        
+        # Validate token
+        if [ -z "${INPUT_TOKEN}" ]; then
+          echo "::error::qoder_personal_access_token is required"
+          exit 1
+        fi
+        
+        # Validate at least prompt or flags provided
+        if [ -z "${INPUT_PROMPT}" ] && [ -z "${INPUT_FLAGS}" ]; then
+          echo "::error::Either 'prompt' or 'flags' must be provided"
+          exit 1
+        fi
+        
+        # Validate flags format
+        if [ -n "${INPUT_FLAGS}" ]; then
+          echo "Validating flags format..."
+          while IFS= read -r line; do
+            # Trim whitespace
+            line=$(echo "$line" | xargs)
+            
+            # Skip empty lines
+            if [ -z "$line" ]; then
+              continue
+            fi
+            
+            # Check if line starts with - or --
+            if [[ ! "$line" =~ ^-{1,2}[a-zA-Z0-9] ]]; then
+              echo "::error::Invalid flag format: '$line'. Each flag must start with - or -- followed by alphanumeric characters"
+              exit 1
+            fi
+            
+            echo "  ✓ Valid flag: $line"
+          done <<< "$INPUT_FLAGS"
+        fi
+        
+        echo "✓ All inputs validated successfully"
+
+    - name: Install qodercli
+      shell: bash
+      run: |
+        echo "Installing qodercli globally..."
+        npm install -g @qoder-ai/qodercli
+        echo "✓ qodercli installed successfully"
+        qodercli --version || echo "Version check not available"
+
+    - name: Setup GitHub App Token
+      id: auth
+      shell: bash
+      env:
+        REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+        REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+      run: |
+        set -e
+        
+        # Qoder API endpoint (hardcoded)
+        QODER_API_BASE_URL="http://dev.lingma-agents-api.aliyuncs.com"
+        
+        echo "Requesting OIDC token..."
+        if [ -z "${REQUEST_URL}" ] || [ -z "${REQUEST_TOKEN}" ]; then
+          echo "::error::OIDC token request failed. Ensure workflow has 'permissions: id-token: write'"
+          exit 1
+        fi
+        
+        RESPONSE=$(curl -sSf -H "Authorization: Bearer ${REQUEST_TOKEN}" "${REQUEST_URL}")
+        OIDC_TOKEN=$(echo "${RESPONSE}" | jq -r '.value')
+        
+        if [ -z "${OIDC_TOKEN}" ] || [ "${OIDC_TOKEN}" = "null" ]; then
+          echo "::error::Failed to extract OIDC token from response"
+          exit 1
+        fi
+        
+        echo "✓ Successfully retrieved OIDC token (length: ${#OIDC_TOKEN})"
+        
+        # Exchange OIDC token for GitHub App installation token
+        EXCHANGE_URL="${QODER_API_BASE_URL}/v1/github/oidc/token"
+        echo "Exchanging OIDC token at: ${EXCHANGE_URL}"
+        
+        TOKEN_RESPONSE=$(curl -sSf -X POST "${EXCHANGE_URL}" \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "oidc_token=$(printf '%s' "${OIDC_TOKEN}" | jq -sRr '@uri')" 2>&1)
+        
+        if [ $? -ne 0 ]; then
+          echo "::warning::Failed to exchange token with Qoder backend: ${TOKEN_RESPONSE}"
+          echo "::warning::Will continue without GitHub App token. Some features may not work."
+          echo "app_token=" >> "$GITHUB_OUTPUT"
+        else
+          echo "Received response from token exchange"
+          
+          INSTALLATION_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.installation_token // empty')
+          
+          if [ -z "${INSTALLATION_TOKEN}" ] || [ "${INSTALLATION_TOKEN}" = "null" ]; then
+            echo "::warning::\`installation_token\` not found in response"
+            echo "::warning::Response body: ${TOKEN_RESPONSE}"
+            echo "::warning::Will continue without GitHub App token. Some features may not work."
+            echo "app_token=" >> "$GITHUB_OUTPUT"
+          else
+            echo "app_token=${INSTALLATION_TOKEN}" >> "$GITHUB_OUTPUT"
+            echo "✓ Successfully exchanged OIDC token for installation_token"
+          fi
+        fi
+
+    - name: Setup qodercli environment
+      shell: bash
+      env:
+        QODER_PERSONAL_ACCESS_TOKEN: ${{ inputs.qoder_personal_access_token }}
+        GITHUB_APP_TOKEN: ${{ steps.auth.outputs.app_token }}
+      run: |
+        set -e
+        
+        echo "Setting up qodercli environment..."
+        
+        # Create .qoder directory in home
+        mkdir -p "$HOME/.qoder/commands" "$HOME/.qoder/subagents"
+        
+        # Copy built-in resources if they exist
+        if [ -d "${GITHUB_ACTION_PATH}/.qoder" ]; then
+          echo "Installing built-in commands and subagents..."
+          cp -R "${GITHUB_ACTION_PATH}/.qoder/"* "$HOME/.qoder/" 2>/dev/null || true
+          
+          # List installed resources
+          if [ -d "$HOME/.qoder/commands" ]; then
+            echo "Installed commands:"
+            ls -la "$HOME/.qoder/commands" || echo "  (none)"
+          fi
+          if [ -d "$HOME/.qoder/subagents" ]; then
+            echo "Installed subagents:"
+            ls -la "$HOME/.qoder/subagents" || echo "  (none)"
+          fi
+        else
+          echo "No built-in resources found at ${GITHUB_ACTION_PATH}/.qoder"
+        fi
+        
+        # Inject environment variables for qodercli
+        echo "QODER_PERSONAL_ACCESS_TOKEN=${QODER_PERSONAL_ACCESS_TOKEN}" >> "$GITHUB_ENV"
+        
+        # Configure gh CLI with App token for GitHub operations
+        if [ -n "${GITHUB_APP_TOKEN}" ]; then
+          echo "Configuring gh CLI with GitHub App token..."
+          echo "${GITHUB_APP_TOKEN}" | gh auth login --with-token 2>/dev/null || true
+          echo "✓ gh CLI configured"
+        fi
+        
+        echo "✓ Environment setup completed"
+
+    - name: Run qodercli
+      id: run_cli
+      shell: bash
+      env:
+        INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_FLAGS: ${{ inputs.flags }}
+      run: |
+        set +e  # Don't exit on error, we need to capture it
+        
+        # Prepare output file
+        OUTPUT_FILE="/tmp/qoder-output-$(date +%s).log"
+        
+        # Build command arguments
+        ARGS="-w $GITHUB_WORKSPACE"
+        
+        # Add prompt if provided
+        if [ -n "${INPUT_PROMPT}" ]; then
+          ARGS="${ARGS} -p ${INPUT_PROMPT}"
+        fi
+        
+        # Check if user specified output format in flags
+        USER_SPECIFIED_FORMAT=false
+        if [ -n "${INPUT_FLAGS}" ]; then
+          if echo "${INPUT_FLAGS}" | grep -qE '(^|\s)(-f|--output-format)(\s|$)'; then
+            USER_SPECIFIED_FORMAT=true
+          fi
+        fi
+        
+        # Add default output format if user didn't specify
+        if [ "${USER_SPECIFIED_FORMAT}" = false ]; then
+          ARGS="${ARGS} -f stream-json"
+        fi
+        
+        # Parse and add user flags
+        if [ -n "${INPUT_FLAGS}" ]; then
+          while IFS= read -r line; do
+            line=$(echo "$line" | xargs)
+            if [ -n "$line" ]; then
+              ARGS="${ARGS} ${line}"
+            fi
+          done <<< "$INPUT_FLAGS"
+        fi
+        
+        echo "Executing qodercli with arguments:"
+        echo "  ${ARGS}"
+        echo ""
+        
+        # Execute qodercli
+        eval "qodercli ${ARGS}" > "$OUTPUT_FILE" 2>&1
+        EXIT_CODE=$?
+        
+        # Handle result
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "✓ qodercli executed successfully"
+          echo "output_file=${OUTPUT_FILE}" >> "$GITHUB_OUTPUT"
+          echo "error=" >> "$GITHUB_OUTPUT"
+          
+          # Show output preview
+          echo ""
+          echo "=== Output Preview (first 50 lines) ==="
+          head -n 50 "$OUTPUT_FILE" || true
+          echo "=== End of Preview ==="
+        else
+          echo "::error::qodercli failed with exit code ${EXIT_CODE}"
+          
+          ERROR_CONTENT=$(cat "$OUTPUT_FILE")
+          echo "error<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${ERROR_CONTENT}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "output_file=" >> "$GITHUB_OUTPUT"
+          
+          # Show error in logs
+          echo ""
+          echo "=== Error Output ==="
+          cat "$OUTPUT_FILE"
+          echo "=== End of Error ==="
+          
+          exit $EXIT_CODE
+        fi
+
+    - name: Revoke GitHub App Token
+      if: always() && steps.auth.outputs.app_token != ''
+      shell: bash
+      env:
+        APP_TOKEN: ${{ steps.auth.outputs.app_token }}
+      run: |
+        set +e  # Don't fail the workflow if revoke fails
+        
+        echo "Revoking GitHub App installation token..."
+        
+        # Revoke the token using GitHub API
+        REVOKE_RESPONSE=$(curl -sSf -X DELETE \
+          -H "Authorization: Bearer ${APP_TOKEN}" \
+          "https://api.github.com/installation/token" 2>&1)
+        
+        if [ $? -eq 0 ]; then
+          echo "✓ GitHub App token revoked successfully"
+        else
+          echo "::warning::Failed to revoke GitHub App token: ${REVOKE_RESPONSE}"
+          echo "::warning::The token will expire automatically, but manual cleanup is recommended"
+        fi
