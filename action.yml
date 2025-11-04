@@ -195,12 +195,13 @@ runs:
         # Prepare output file
         OUTPUT_FILE="/tmp/qoder-output-$(date +%s).log"
         
-        # Build command arguments
-        ARGS="-w $GITHUB_WORKSPACE"
+        # Build command arguments array
+        ARGS=()
+        ARGS+=("-w" "$GITHUB_WORKSPACE")
         
-        # Add prompt if provided
+        # Add prompt if provided (use array to handle multi-line)
         if [ -n "${INPUT_PROMPT}" ]; then
-          ARGS="${ARGS} -p ${INPUT_PROMPT}"
+          ARGS+=("-p" "${INPUT_PROMPT}")
         fi
         
         # Check if user specified output format in flags
@@ -213,7 +214,7 @@ runs:
         
         # Add default output format if user didn't specify
         if [ "${USER_SPECIFIED_FORMAT}" = false ]; then
-          ARGS="${ARGS} -f stream-json"
+          ARGS+=("-f" "stream-json")
         fi
         
         # Parse and add user flags
@@ -221,17 +222,17 @@ runs:
           while IFS= read -r line; do
             line=$(echo "$line" | xargs)
             if [ -n "$line" ]; then
-              ARGS="${ARGS} ${line}"
+              ARGS+=("$line")
             fi
           done <<< "$INPUT_FLAGS"
         fi
         
         echo "Executing qodercli with arguments:"
-        echo "  ${ARGS}"
+        printf '  %s\n' "${ARGS[@]}"
         echo ""
         
-        # Execute qodercli
-        eval "qodercli ${ARGS}" > "$OUTPUT_FILE" 2>&1
+        # Execute qodercli with properly quoted arguments
+        qodercli "${ARGS[@]}" > "$OUTPUT_FILE" 2>&1
         EXIT_CODE=$?
         
         # Handle result
