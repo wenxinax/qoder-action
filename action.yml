@@ -234,9 +234,9 @@ runs:
         printf '  %s\n' "${ARGS[@]}"
         echo ""
         
-        # Execute qodercli with properly quoted arguments
-        qodercli "${ARGS[@]}" > "$OUTPUT_FILE" 2>&1
-        EXIT_CODE=$?
+        # Execute qodercli with real-time output to console
+        qodercli "${ARGS[@]}" 2>&1 | tee "$OUTPUT_FILE"
+        EXIT_CODE=${PIPESTATUS[0]}
         
         # Handle result
         if [ $EXIT_CODE -eq 0 ]; then
