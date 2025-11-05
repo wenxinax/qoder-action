@@ -233,6 +233,7 @@ runs:
         # Build command arguments array
         ARGS=()
         ARGS+=("-w" "$GITHUB_WORKSPACE")
+        ARGS+=("--dangerously-skip-permissions")
         
         # Add prompt if provided (use array to handle multi-line)
         if [ -n "${INPUT_PROMPT}" ]; then
