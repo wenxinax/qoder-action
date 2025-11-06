@@ -148,7 +148,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.auth.outputs.app_token }}
       run: |
-        cat > "$HOME/.qoder.json" << 'EOF'
+        cat > "$HOME/.qoder.json" <<EOF
         {
           "mcpServers": {
             "github": {
@@ -168,6 +168,7 @@ runs:
           }
         }
         EOF
+        echo "✓ Created .qoder.json with GitHub token"
 
     - name: Setup qodercli environment
       shell: bash
@@ -237,6 +238,10 @@ runs:
           
           echo "Listing configured MCP servers..."
           qodercli mcp list || echo "::warning::Failed to list MCP servers"
+          echo ""
+          
+          echo "Getting GitHub MCP server details..."
+          qodercli mcp get github || echo "::warning::Failed to get GitHub MCP server config"
         else
           echo "::warning::.qoder.json not found at $HOME/.qoder.json"
         fi
