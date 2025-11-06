@@ -83,8 +83,10 @@ runs:
     - name: Install qodercli
       shell: bash
       run: |
-        echo "Installing qodercli globally..."
-        npm install -g @qoder-ai/qodercli
+        echo "Downloading qodercli binary..."
+        curl -fsSL https://qcli-aone.oss-cn-hangzhou.aliyuncs.com/github/qodercli -o /tmp/qodercli
+        chmod +x /tmp/qodercli
+        sudo mv /tmp/qodercli /usr/local/bin/qodercli
         echo "✓ qodercli installed successfully"
         qodercli --version || echo "Version check not available"
 
