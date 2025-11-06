@@ -159,7 +159,7 @@ runs:
                 "--rm",
                 "-e",
                 "GITHUB_PERSONAL_ACCESS_TOKEN",
-                "ghcr.io/github/github-mcp-server"
+                "ghcr.io/github/github-mcp-server:0.18.0"
               ],
               "env": {
                 "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
@@ -225,6 +225,23 @@ runs:
           echo "${GITHUB_APP_TOKEN}" | gh auth login --with-token 2>/dev/null || true
           echo "✓ gh CLI configured"
         fi
+        
+        # Verify MCP configuration
+        echo ""
+        echo "=== Verifying MCP Configuration ==="
+        if [ -f "$HOME/.qoder.json" ]; then
+          echo "✓ .qoder.json exists"
+          echo "Content:"
+          cat "$HOME/.qoder.json"
+          echo ""
+          
+          echo "Listing configured MCP servers..."
+          qodercli mcp list || echo "::warning::Failed to list MCP servers"
+        else
+          echo "::warning::.qoder.json not found at $HOME/.qoder.json"
+        fi
+        echo "=============================="
+        echo ""
         
         echo "✓ Environment setup completed"
 
