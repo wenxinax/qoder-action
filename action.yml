@@ -143,6 +143,32 @@ runs:
           fi
         fi
 
+    - name: Create GitHub MCP Config
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.auth.outputs.app_token }}
+      run: |
+        cat > "$HOME/.qoder.json" << 'EOF'
+        {
+          "mcpServers": {
+            "github": {
+              "command": "docker",
+              "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "GITHUB_PERSONAL_ACCESS_TOKEN",
+                "ghcr.io/github/github-mcp-server"
+              ],
+              "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+              }
+            }
+          }
+        }
+        EOF
+
     - name: Setup qodercli environment
       shell: bash
       env:
