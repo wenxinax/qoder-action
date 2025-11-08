@@ -149,6 +149,8 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ steps.auth.outputs.app_token }}
+        GITHUB_OWNER: ${{ github.repository_owner }}
+        GITHUB_REPO: ${{ github.event.repository.name }}
       run: |
         cat > "$HOME/.qoder.json" <<EOF
         {
@@ -166,11 +168,32 @@ runs:
               "env": {
                 "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
               }
+            },
+            "qoder_github": {
+              "command": "docker",
+              "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "GITHUB_TOKEN",
+                "-e",
+                "GITHUB_OWNER",
+                "-e",
+                "GITHUB_REPO",
+                "ghcr.io/wenxinax/qoder-github-mcp-server:latest"
+              ],
+              "env": {
+                "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+                "GITHUB_OWNER": "${GITHUB_OWNER}",
+                "GITHUB_REPO": "${GITHUB_REPO}"
+              },
+              "type": "stdio"
             }
           }
         }
         EOF
-        echo "✓ Created .qoder.json with GitHub token"
+        echo "✓ Created .qoder.json with GitHub MCP servers (github + qoder_github)"
 
     - name: Setup qodercli environment
       shell: bash
