@@ -181,12 +181,18 @@ runs:
                 "GITHUB_OWNER",
                 "-e",
                 "GITHUB_REPO",
+                "-e",
+                "QODER_COMMENT_ID",
+                "-e",
+                "QODER_COMMENT_TYPE",
                 "ghcr.io/wenxinax/qoder-github-mcp-server:latest"
               ],
               "env": {
                 "GITHUB_TOKEN": "${GITHUB_TOKEN}",
                 "GITHUB_OWNER": "${GITHUB_OWNER}",
-                "GITHUB_REPO": "${GITHUB_REPO}"
+                "GITHUB_REPO": "${GITHUB_REPO}",
+                "QODER_COMMENT_ID": "test",
+                "QODER_COMMENT_TYPE": "issue"
               },
               "type": "stdio"
             }
