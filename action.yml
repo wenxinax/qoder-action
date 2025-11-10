@@ -118,25 +118,27 @@ runs:
         echo "✓ Successfully retrieved OIDC token (length: ${#OIDC_TOKEN})"
         
         # Exchange OIDC token for GitHub App installation token
-        EXCHANGE_URL="${QODER_API_BASE_URL}/v1/github/oidc/token"
+        EXCHANGE_URL="https://test.qoder.ai/api/github/github-app-token-exchange"
         echo "Exchanging OIDC token at: ${EXCHANGE_URL}"
         
         TOKEN_RESPONSE=$(curl -sSf -X POST "${EXCHANGE_URL}" \
-          -H "Content-Type: application/x-www-form-urlencoded" \
-          -d "oidc_token=$(printf '%s' "${OIDC_TOKEN}" | jq -sRr '@uri')" 2>&1)
+          -H "Authorization: Bearer ${OIDC_TOKEN}" \
+          -H "Content-Type: application/json" 2>&1)
         
         if [ $? -ne 0 ]; then
           echo "::warning::Failed to exchange token with Qoder backend: ${TOKEN_RESPONSE}"
           echo "::warning::Will continue without GitHub App token. Some features may not work."
           echo "app_token=" >> "$GITHUB_OUTPUT"
         else
-          echo "Received response from token exchange"
+          echo "=== Raw Response from Token Exchange ==="
+          echo "${TOKEN_RESPONSE}"
+          echo "========================================="
+          echo ""
           
           INSTALLATION_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.installation_token // empty')
           
           if [ -z "${INSTALLATION_TOKEN}" ] || [ "${INSTALLATION_TOKEN}" = "null" ]; then
             echo "::warning::\`installation_token\` not found in response"
-            echo "::warning::Response body: ${TOKEN_RESPONSE}"
             echo "::warning::Will continue without GitHub App token. Some features may not work."
             echo "app_token=" >> "$GITHUB_OUTPUT"
           else
