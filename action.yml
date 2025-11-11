@@ -257,9 +257,9 @@ runs:
         ERROR_FILE="/tmp/qoder-error-$(date +%s).log"
         
         # Build command arguments
-        ARGS=("-w" "$GITHUB_WORKSPACE" "--dangerously-skip-permissions")
+        ARGS=("-w" "$GITHUB_WORKSPACE")
         
-        # Add prompt if provided
+        # Add prompt
         [ -n "${INPUT_PROMPT}" ] && ARGS+=("-p" "${INPUT_PROMPT}")
         
         # Add default output format if not specified by user
@@ -286,10 +286,12 @@ runs:
         
         # Set outputs
         echo "output_file=${OUTPUT_FILE}" >> "$GITHUB_OUTPUT"
-        if [ -f "${ERROR_FILE}" ]; then
-          echo "error<<EOF" >> "$GITHUB_OUTPUT"
-          cat "$ERROR_FILE" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+        if [ -f "${ERROR_FILE}" ] && [ -s "${ERROR_FILE}" ]; then
+          {
+            echo "error<<QODER_ERROR_EOF"
+            cat "$ERROR_FILE"
+            echo "QODER_ERROR_EOF"
+          } >> "$GITHUB_OUTPUT"
         else
           echo "error=" >> "$GITHUB_OUTPUT"
         fi
@@ -297,29 +299,14 @@ runs:
         # Handle execution result
         if [ $EXIT_CODE -eq 0 ]; then
           echo "✓ qodercli executed successfully"
-          echo "## ✅ Qodercli Execution Successful" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Exit Code:** 0" >> "$GITHUB_STEP_SUMMARY"
         else
           echo "::error::qodercli failed with exit code ${EXIT_CODE}"
           
           # Output error details to annotations
           if [ -f "${ERROR_FILE}" ] && [ -s "${ERROR_FILE}" ]; then
-            echo "::error::Error details:"
             cat "$ERROR_FILE" | while IFS= read -r line; do
-              echo "::error::  $line"
+              echo "::error::$line"
             done
-          fi
-          
-          # Generate failure summary
-          echo "## ❌ Qodercli Execution Failed" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Exit Code:** ${EXIT_CODE}" >> "$GITHUB_STEP_SUMMARY"
-          
-          if [ -f "${ERROR_FILE}" ] && [ -s "${ERROR_FILE}" ]; then
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "### Error Details" >> "$GITHUB_STEP_SUMMARY"
-            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
-            cat "$ERROR_FILE" >> "$GITHUB_STEP_SUMMARY"
-            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
           fi
           
           exit $EXIT_CODE
