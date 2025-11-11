@@ -8,7 +8,7 @@ branding:
 inputs:
   prompt:
     description: 'Instructions for qodercli (passed to -p flag)'
-    required: false
+    required: true
     default: ''
   
   flags:
@@ -35,51 +35,6 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Validate inputs
-      shell: bash
-      env:
-        INPUT_PROMPT: ${{ inputs.prompt }}
-        INPUT_FLAGS: ${{ inputs.flags }}
-        INPUT_TOKEN: ${{ inputs.qoder_personal_access_token }}
-      run: |
-        set -e
-        
-        # Validate token
-        if [ -z "${INPUT_TOKEN}" ]; then
-          echo "::error::qoder_personal_access_token is required"
-          exit 1
-        fi
-        
-        # Validate at least prompt or flags provided
-        if [ -z "${INPUT_PROMPT}" ] && [ -z "${INPUT_FLAGS}" ]; then
-          echo "::error::Either 'prompt' or 'flags' must be provided"
-          exit 1
-        fi
-        
-        # Validate flags format
-        if [ -n "${INPUT_FLAGS}" ]; then
-          echo "Validating flags format..."
-          while IFS= read -r line; do
-            # Trim whitespace
-            line=$(echo "$line" | xargs)
-            
-            # Skip empty lines
-            if [ -z "$line" ]; then
-              continue
-            fi
-            
-            # Check if line starts with - or --
-            if [[ ! "$line" =~ ^-{1,2}[a-zA-Z0-9] ]]; then
-              echo "::error::Invalid flag format: '$line'. Each flag must start with - or -- followed by alphanumeric characters"
-              exit 1
-            fi
-            
-            echo "  ✓ Valid flag: $line"
-          done <<< "$INPUT_FLAGS"
-        fi
-        
-        echo "✓ All inputs validated successfully"
-
     - name: Install qodercli
       shell: bash
       run: |
@@ -172,22 +127,20 @@ runs:
         git remote set-url origin "${REMOTE_URL}"
         echo "✓ Git authentication configured successfully"
 
-    - name: Download qoder-github MCP Server
-      shell: bash
-      run: |
-        echo "Downloading qoder-github MCP server..."
-        curl -fsSL https://download.qoder.com/qodercli/mcp/qoder-github-mcp-server -o /tmp/qoder-github-mcp-server
-        chmod +x /tmp/qoder-github-mcp-server
-        sudo mv /tmp/qoder-github-mcp-server /usr/local/bin/qoder-github-mcp-server
-        echo "✓ qoder-github MCP server installed successfully"
-
-    - name: Create qoder_github MCP Config
+    - name: Setup qoder-github MCP Server
       shell: bash
       env:
         GITHUB_TOKEN: ${{ steps.auth.outputs.app_token }}
         GITHUB_OWNER: ${{ github.repository_owner }}
         GITHUB_REPO: ${{ github.event.repository.name }}
       run: |
+        echo "Downloading qoder-github MCP server..."
+        curl -fsSL https://download.qoder.com/qodercli/mcp/qoder-github-mcp-server -o /tmp/qoder-github-mcp-server
+        chmod +x /tmp/qoder-github-mcp-server
+        sudo mv /tmp/qoder-github-mcp-server /usr/local/bin/qoder-github-mcp-server
+        echo "✓ qoder-github MCP server installed"
+        
+        echo "Creating MCP configuration..."
         cat > "$HOME/.qoder.json" <<EOF
         {
           "mcpServers": {
@@ -204,13 +157,13 @@ runs:
           }
         }
         EOF
-        echo "✓ Created .qoder.json with qoder_github MCP server"
+        echo "✓ MCP configuration created"
 
     - name: Setup qodercli environment
       shell: bash
       env:
         QODER_PERSONAL_ACCESS_TOKEN: ${{ inputs.qoder_personal_access_token }}
-        GITHUB_APP_TOKEN: ${{ steps.auth.outputs.app_token }}
+        GITHUB_TOKEN: ${{ steps.auth.outputs.app_token }}
       run: |
         set -e
         
@@ -257,9 +210,9 @@ runs:
         echo "QODER_PERSONAL_ACCESS_TOKEN=${QODER_PERSONAL_ACCESS_TOKEN}" >> "$GITHUB_ENV"
         
         # Configure gh CLI with App token for GitHub operations
-        if [ -n "${GITHUB_APP_TOKEN}" ]; then
+        if [ -n "${GITHUB_TOKEN}" ]; then
           echo "Configuring gh CLI with GitHub App token..."
-          echo "${GITHUB_APP_TOKEN}" | gh auth login --with-token 2>/dev/null || true
+          echo "${GITHUB_TOKEN}" | gh auth login --with-token 2>/dev/null || true
           echo "✓ gh CLI configured"
         fi
         
@@ -311,8 +264,9 @@ runs:
         echo "=============================="
         echo ""
         
-        # Prepare output file
+        # Prepare output files
         OUTPUT_FILE="/tmp/qoder-output-$(date +%s).log"
+        ERROR_FILE="/tmp/qoder-error-$(date +%s).log"
         
         # Build command arguments array
         ARGS=()
@@ -351,36 +305,34 @@ runs:
         printf '  %s\n' "${ARGS[@]}"
         echo ""
         
-        # Execute qodercli with real-time output to console
-        qodercli "${ARGS[@]}" 2>&1 | tee "$OUTPUT_FILE"
-        EXIT_CODE=${PIPESTATUS[0]}
+        # Execute qodercli and capture stdout and stderr separately
+        qodercli "${ARGS[@]}" > >(tee "$OUTPUT_FILE") 2> >(tee "$ERROR_FILE" >&2)
+        EXIT_CODE=$?
         
-        # Handle result
-        if [ $EXIT_CODE -eq 0 ]; then
-          echo "✓ qodercli executed successfully"
-          echo "output_file=${OUTPUT_FILE}" >> "$GITHUB_OUTPUT"
-          echo "error=" >> "$GITHUB_OUTPUT"
-          
-          # Show output preview
-          echo ""
-          echo "=== Output Preview (first 50 lines) ==="
-          head -n 50 "$OUTPUT_FILE" || true
-          echo "=== End of Preview ==="
-        else
-          echo "::error::qodercli failed with exit code ${EXIT_CODE}"
-          
-          ERROR_CONTENT=$(cat "$OUTPUT_FILE")
+        # Wait for background processes to finish
+        wait
+        
+        echo ""
+        echo "Output file: ${OUTPUT_FILE}"
+        echo "Error file: ${ERROR_FILE}"
+        
+        # Set outputs
+        echo "output_file=${OUTPUT_FILE}" >> "$GITHUB_OUTPUT"
+        
+        # Always set error output (may contain content even if exit code is 0)
+        if [ -f "${ERROR_FILE}" ]; then
+          ERROR_CONTENT=$(cat "$ERROR_FILE")
           echo "error<<EOF" >> "$GITHUB_OUTPUT"
           echo "${ERROR_CONTENT}" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-          echo "output_file=" >> "$GITHUB_OUTPUT"
-          
-          # Show error in logs
-          echo ""
-          echo "=== Error Output ==="
-          cat "$OUTPUT_FILE"
-          echo "=== End of Error ==="
-          
+        else
+          echo "error=" >> "$GITHUB_OUTPUT"
+        fi
+        
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "✓ qodercli executed successfully (exit code: 0)"
+        else
+          echo "::error::qodercli failed with exit code ${EXIT_CODE}"
           exit $EXIT_CODE
         fi
 
