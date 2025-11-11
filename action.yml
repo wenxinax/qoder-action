@@ -209,6 +209,28 @@ runs:
         echo "=== Testing Git Push Capability ==="
         echo ""
         
+        # Check if in detached HEAD state and checkout to actual branch
+        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        echo "Current state: ${CURRENT_BRANCH}"
+        
+        if [ "${CURRENT_BRANCH}" = "HEAD" ]; then
+          echo "In detached HEAD state, checking out to actual branch..."
+          
+          # Get the branch name from GITHUB_REF (e.g., refs/heads/main -> main)
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            # For pull requests
+            TARGET_BRANCH="${GITHUB_HEAD_REF}"
+          else
+            # For push events, extract branch name from GITHUB_REF
+            TARGET_BRANCH=$(echo "${GITHUB_REF}" | sed 's|refs/heads/||')
+          fi
+          
+          echo "Target branch: ${TARGET_BRANCH}"
+          git checkout -B "${TARGET_BRANCH}"
+          echo "✓ Checked out to ${TARGET_BRANCH}"
+          CURRENT_BRANCH="${TARGET_BRANCH}"
+        fi
+        
         # Create a test file
         TEST_FILE=".github/.qoder-test-$(date +%s).txt"
         mkdir -p .github
@@ -221,7 +243,6 @@ runs:
         echo "✓ Test commit created"
         
         # Push to current branch
-        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
         echo "Pushing to branch: ${CURRENT_BRANCH}"
         git push origin "${CURRENT_BRANCH}"
         echo "✓ Successfully pushed to ${CURRENT_BRANCH}"
