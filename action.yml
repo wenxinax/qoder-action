@@ -90,7 +90,7 @@ runs:
         echo "✓ qodercli installed successfully"
         qodercli --version || echo "Version check not available"
 
-    - name: Setup GitHub App Token
+    - name: Configure Git Authentication
       id: auth
       shell: bash
       run: |
@@ -133,21 +133,94 @@ runs:
           echo "::warning::Failed to exchange token with Qoder backend: ${TOKEN_RESPONSE}"
           echo "::warning::Will continue without GitHub App token. Some features may not work."
           echo "app_token=" >> "$GITHUB_OUTPUT"
-        else
-          echo "Received response from token exchange"
-          
-          INSTALLATION_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.installation_token // empty')
-          
-          if [ -z "${INSTALLATION_TOKEN}" ] || [ "${INSTALLATION_TOKEN}" = "null" ]; then
-            echo "::warning::\`installation_token\` not found in response"
-            echo "::warning::Response body: ${TOKEN_RESPONSE}"
-            echo "::warning::Will continue without GitHub App token. Some features may not work."
-            echo "app_token=" >> "$GITHUB_OUTPUT"
-          else
-            echo "app_token=${INSTALLATION_TOKEN}" >> "$GITHUB_OUTPUT"
-            echo "✓ Successfully exchanged OIDC token for installation_token"
-          fi
+          exit 0
         fi
+        
+        echo "Received response from token exchange"
+        
+        INSTALLATION_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.installation_token // empty')
+        
+        if [ -z "${INSTALLATION_TOKEN}" ] || [ "${INSTALLATION_TOKEN}" = "null" ]; then
+          echo "::warning::\`installation_token\` not found in response"
+          echo "::warning::Response body: ${TOKEN_RESPONSE}"
+          echo "::warning::Will continue without GitHub App token. Some features may not work."
+          echo "app_token=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        
+        echo "app_token=${INSTALLATION_TOKEN}" >> "$GITHUB_OUTPUT"
+        echo "✓ Successfully exchanged OIDC token for installation_token"
+        
+        # Configure Git authentication with the App token
+        echo ""
+        echo "Configuring Git authentication..."
+        
+        # Get GitHub App Bot user information
+        echo "Fetching GitHub App Bot user information..."
+        USER_RESPONSE=$(curl -sSf -H "Authorization: Bearer ${INSTALLATION_TOKEN}" \
+          "${GITHUB_API_URL}/user" 2>&1)
+        
+        if [ $? -ne 0 ]; then
+          echo "::warning::Failed to fetch user information: ${USER_RESPONSE}"
+          echo "::warning::Skipping Git authentication configuration"
+          exit 0
+        fi
+        
+        BOT_LOGIN=$(echo "${USER_RESPONSE}" | jq -r '.login')
+        BOT_ID=$(echo "${USER_RESPONSE}" | jq -r '.id')
+        
+        if [ -z "${BOT_LOGIN}" ] || [ "${BOT_LOGIN}" = "null" ] || [ -z "${BOT_ID}" ] || [ "${BOT_ID}" = "null" ]; then
+          echo "::warning::Failed to extract bot login or ID from response"
+          echo "::warning::Response: ${USER_RESPONSE}"
+          echo "::warning::Skipping Git authentication configuration"
+          exit 0
+        fi
+        
+        echo "✓ Retrieved bot information: ${BOT_LOGIN} (ID: ${BOT_ID})"
+        
+        # Determine noreply email domain based on GITHUB_SERVER_URL
+        SERVER_HOST=$(echo "${GITHUB_SERVER_URL}" | sed 's|https\?://||' | sed 's|/.*||')
+        if [ "${SERVER_HOST}" = "github.com" ]; then
+          NOREPLY_DOMAIN="users.noreply.github.com"
+        else
+          NOREPLY_DOMAIN="users.noreply.${SERVER_HOST}"
+        fi
+        
+        # Configure git user
+        echo "Configuring git user..."
+        git config user.name "${BOT_LOGIN}"
+        git config user.email "${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}"
+        echo "✓ Set git user as ${BOT_LOGIN} <${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}>"
+        
+        # Remove the authorization header that actions/checkout sets
+        echo "Removing existing git authentication headers..."
+        git config --unset-all "http.${GITHUB_SERVER_URL}/.extraheader" 2>/dev/null || echo "No existing authentication headers to remove"
+        
+        # Update the remote URL to include the token for authentication
+        echo "Updating remote URL with authentication token..."
+        REMOTE_URL="https://x-access-token:${INSTALLATION_TOKEN}@${SERVER_HOST}/${GITHUB_REPOSITORY}.git"
+        git remote set-url origin "${REMOTE_URL}"
+        echo "✓ Updated remote URL with authentication token"
+        
+        echo "✓ Git authentication configured successfully"
+
+    - name: Verify Git Configuration
+      if: steps.auth.outputs.app_token != ''
+      shell: bash
+      run: |
+        echo "=== Git Configuration Verification ==="
+        echo ""
+        echo "Git User Configuration:"
+        echo "  user.name: $(git config user.name)"
+        echo "  user.email: $(git config user.email)"
+        echo ""
+        echo "Git Remote Configuration:"
+        git remote -v | sed 's/x-access-token:[^@]*/x-access-token:***/' || echo "Failed to get remote info"
+        echo ""
+        echo "Current Git Identity:"
+        git config --list | grep -E '^user\.' || echo "No user config found"
+        echo ""
+        echo "==============================="
 
     - name: Download qoder-github MCP Server
       shell: bash
