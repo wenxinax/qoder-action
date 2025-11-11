@@ -203,6 +203,31 @@ runs:
         git config --list | grep -E '^user\.' || echo "No user config found"
         echo ""
         echo "==============================="
+        echo ""
+        
+        # Test commit and push
+        echo "=== Testing Git Push Capability ==="
+        echo ""
+        
+        # Create a test file
+        TEST_FILE=".github/.qoder-test-$(date +%s).txt"
+        mkdir -p .github
+        echo "Test commit at $(date)" > "${TEST_FILE}"
+        echo "Created test file: ${TEST_FILE}"
+        
+        # Commit the test file
+        git add "${TEST_FILE}"
+        git commit -m "test: verify git push capability"
+        echo "✓ Test commit created"
+        
+        # Push to current branch
+        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        echo "Pushing to branch: ${CURRENT_BRANCH}"
+        git push origin "${CURRENT_BRANCH}"
+        echo "✓ Successfully pushed to ${CURRENT_BRANCH}"
+        
+        echo ""
+        echo "=== Git Push Test Completed ==="
 
     - name: Download qoder-github MCP Server
       shell: bash
