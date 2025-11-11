@@ -107,7 +107,7 @@ runs:
           exit 1
         fi
         
-        RESPONSE=$(curl -sSf -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}")
+        RESPONSE=$(curl -sSf -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=qoder-action")
         OIDC_TOKEN=$(echo "${RESPONSE}" | jq -r '.value')
         
         if [ -z "${OIDC_TOKEN}" ] || [ "${OIDC_TOKEN}" = "null" ]; then
