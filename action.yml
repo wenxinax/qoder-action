@@ -340,24 +340,24 @@ runs:
           exit $EXIT_CODE
         fi
 
-    - name: Revoke GitHub App Token
-      if: always() && steps.auth.outputs.app_token != ''
-      shell: bash
-      env:
-        APP_TOKEN: ${{ steps.auth.outputs.app_token }}
-      run: |
-        set +e  # Don't fail the workflow if revoke fails
+    # - name: Revoke GitHub App Token
+    #   if: always() && steps.auth.outputs.app_token != ''
+    #   shell: bash
+    #   env:
+    #     APP_TOKEN: ${{ steps.auth.outputs.app_token }}
+    #   run: |
+    #     set +e  # Don't fail the workflow if revoke fails
         
-        echo "Revoking GitHub App installation token..."
+    #     echo "Revoking GitHub App installation token..."
         
-        # Revoke the token using GitHub API
-        REVOKE_RESPONSE=$(curl -sSf -X DELETE \
-          -H "Authorization: Bearer ${APP_TOKEN}" \
-          "https://api.github.com/installation/token" 2>&1)
+    #     # Revoke the token using GitHub API
+    #     REVOKE_RESPONSE=$(curl -sSf -X DELETE \
+    #       -H "Authorization: Bearer ${APP_TOKEN}" \
+    #       "https://api.github.com/installation/token" 2>&1)
         
-        if [ $? -eq 0 ]; then
-          echo "✓ GitHub App token revoked successfully"
-        else
-          echo "::warning::Failed to revoke GitHub App token: ${REVOKE_RESPONSE}"
-          echo "::warning::The token will expire automatically, but manual cleanup is recommended"
-        fi
+    #     if [ $? -eq 0 ]; then
+    #       echo "✓ GitHub App token revoked successfully"
+    #     else
+    #       echo "::warning::Failed to revoke GitHub App token: ${REVOKE_RESPONSE}"
+    #       echo "::warning::The token will expire automatically, but manual cleanup is recommended"
+    #     fi
