@@ -244,7 +244,7 @@ runs:
         
         # Push to current branch
         echo "Pushing to branch: ${CURRENT_BRANCH}"
-        git push origin "${CURRENT_BRANCH}"
+        git push --force-with-lease origin "${CURRENT_BRANCH}"
         echo "✓ Successfully pushed to ${CURRENT_BRANCH}"
         
         echo ""
