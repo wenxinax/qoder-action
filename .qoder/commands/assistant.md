@@ -1,5 +1,4 @@
 ---
-allowed-tools: Glob,Grep,Bash,Task,mcp__qoder_github__reply_comment,mcp__qoder_github__update_comment
 description: GitHub Assistant（即时评论响应）
 ---
 

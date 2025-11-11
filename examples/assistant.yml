@@ -27,7 +27,7 @@ jobs:
         with:
           qoder_personal_access_token: ${{ secrets.QODER_PERSONAL_ACCESS_TOKEN }}
           prompt: |
-            使用 assistant 命令处理评论请求
+            /assistant
             REPO: ${{ github.repository }}
             REQUEST_SOURCE: ${{ github.event_name }}
             THREAD_ID: ${{ github.event.comment.node_id }}

@@ -101,20 +101,13 @@ runs:
         
         echo "Requesting OIDC token..."
         
-        # Print OIDC environment variables for local debugging
-        echo "=== OIDC Debug Information (Base64 encoded to avoid masking) ==="
-        echo "ACTIONS_ID_TOKEN_REQUEST_URL (base64): $(echo -n "${ACTIONS_ID_TOKEN_REQUEST_URL}" | base64)"
-        echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN (base64): $(echo -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" | base64)"
-        echo "==============================="
-        echo ""
-        
         # Directly read from environment variables (not via GitHub Actions expression)
         if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" ]; then
           echo "::error::OIDC token request failed. Ensure workflow has 'permissions: id-token: write'"
           exit 1
         fi
         
-        RESPONSE=$(curl -sSf -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=qoder-action")
+        RESPONSE=$(curl -sSf -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}")
         OIDC_TOKEN=$(echo "${RESPONSE}" | jq -r '.value')
         
         if [ -z "${OIDC_TOKEN}" ] || [ "${OIDC_TOKEN}" = "null" ]; then
@@ -122,34 +115,28 @@ runs:
           exit 1
         fi
         
-        echo "=== OIDC Token (Base64 encoded for local debugging) ==="
-        echo "$(echo -n "${OIDC_TOKEN}" | base64)"
-        echo "========================================="
-        echo ""
         echo "✓ Successfully retrieved OIDC token (length: ${#OIDC_TOKEN})"
         
         # Exchange OIDC token for GitHub App installation token
-        EXCHANGE_URL="https://test.qoder.ai/api/github/github-app-token-exchange"
+        EXCHANGE_URL="${QODER_API_BASE_URL}/v1/github/oidc/token"
         echo "Exchanging OIDC token at: ${EXCHANGE_URL}"
         
         TOKEN_RESPONSE=$(curl -sSf -X POST "${EXCHANGE_URL}" \
-          -H "Authorization: Bearer ${OIDC_TOKEN}" \
-          -H "Content-Type: application/json" 2>&1)
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "oidc_token=$(printf '%s' "${OIDC_TOKEN}" | jq -sRr '@uri')" 2>&1)
         
         if [ $? -ne 0 ]; then
           echo "::warning::Failed to exchange token with Qoder backend: ${TOKEN_RESPONSE}"
           echo "::warning::Will continue without GitHub App token. Some features may not work."
           echo "app_token=" >> "$GITHUB_OUTPUT"
         else
-          echo "=== Raw Response from Token Exchange ==="
-          echo "${TOKEN_RESPONSE}"
-          echo "========================================="
-          echo ""
+          echo "Received response from token exchange"
           
           INSTALLATION_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.installation_token // empty')
           
           if [ -z "${INSTALLATION_TOKEN}" ] || [ "${INSTALLATION_TOKEN}" = "null" ]; then
             echo "::warning::\`installation_token\` not found in response"
+            echo "::warning::Response body: ${TOKEN_RESPONSE}"
             echo "::warning::Will continue without GitHub App token. Some features may not work."
             echo "app_token=" >> "$GITHUB_OUTPUT"
           else
@@ -158,7 +145,16 @@ runs:
           fi
         fi
 
-    - name: Create GitHub MCP Config
+    - name: Download qoder-github MCP Server
+      shell: bash
+      run: |
+        echo "Downloading qoder-github MCP server..."
+        curl -fsSL https://download.qoder.com/qodercli/mcp/qoder-github-mcp-server -o /tmp/qoder-github-mcp-server
+        chmod +x /tmp/qoder-github-mcp-server
+        sudo mv /tmp/qoder-github-mcp-server /usr/local/bin/qoder-github-mcp-server
+        echo "✓ qoder-github MCP server installed successfully"
+
+    - name: Create qoder_github MCP Config
       shell: bash
       env:
         GITHUB_TOKEN: ${{ steps.auth.outputs.app_token }}
@@ -168,51 +164,20 @@ runs:
         cat > "$HOME/.qoder.json" <<EOF
         {
           "mcpServers": {
-            "github": {
-              "command": "docker",
-              "args": [
-                "run",
-                "-i",
-                "--rm",
-                "-e",
-                "GITHUB_PERSONAL_ACCESS_TOKEN",
-                "ghcr.io/github/github-mcp-server:0.18.0"
-              ],
-              "env": {
-                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-              }
-            },
             "qoder_github": {
-              "command": "docker",
-              "args": [
-                "run",
-                "-i",
-                "--rm",
-                "-e",
-                "GITHUB_TOKEN",
-                "-e",
-                "GITHUB_OWNER",
-                "-e",
-                "GITHUB_REPO",
-                "-e",
-                "QODER_COMMENT_ID",
-                "-e",
-                "QODER_COMMENT_TYPE",
-                "ghcr.io/wenxinax/qoder-github-mcp-server:latest"
-              ],
+              "command": "/usr/local/bin/qoder-github-mcp-server",
+              "args": ["stdio"],
               "env": {
                 "GITHUB_TOKEN": "${GITHUB_TOKEN}",
                 "GITHUB_OWNER": "${GITHUB_OWNER}",
-                "GITHUB_REPO": "${GITHUB_REPO}",
-                "QODER_COMMENT_ID": "test",
-                "QODER_COMMENT_TYPE": "issue"
+                "GITHUB_REPO": "${GITHUB_REPO}"
               },
               "type": "stdio"
             }
           }
         }
         EOF
-        echo "✓ Created .qoder.json with GitHub MCP servers (github + qoder_github)"
+        echo "✓ Created .qoder.json with qoder_github MCP server"
 
     - name: Setup qodercli environment
       shell: bash
@@ -284,8 +249,8 @@ runs:
           qodercli mcp list || echo "::warning::Failed to list MCP servers"
           echo ""
           
-          echo "Getting GitHub MCP server details..."
-          qodercli mcp get github || echo "::warning::Failed to get GitHub MCP server config"
+          echo "Getting qoder_github MCP server details..."
+          qodercli mcp get qoder_github || echo "::warning::Failed to get qoder_github MCP server config"
         else
           echo "::warning::.qoder.json not found at $HOME/.qoder.json"
         fi
