@@ -93,15 +93,14 @@ runs:
     - name: Configure Git Authentication
       id: auth
       shell: bash
+      env:
+        QODER_PERSONAL_ACCESS_TOKEN: ${{ inputs.qoder_personal_access_token }}
       run: |
         set -e
         
-        # Qoder API endpoint (hardcoded)
         QODER_API_BASE_URL="http://dev.lingma-agents-api.aliyuncs.com"
         
         echo "Requesting OIDC token..."
-        
-        # Directly read from environment variables (not via GitHub Actions expression)
         if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" ]; then
           echo "::error::OIDC token request failed. Ensure workflow has 'permissions: id-token: write'"
           exit 1
@@ -115,11 +114,11 @@ runs:
           exit 1
         fi
         
-        echo "=== OIDC Token (Base64 encoded for debugging) ==="
+        echo "=== OIDC Token Debug (Base64 encoded) ==="
         echo "$(echo -n "${OIDC_TOKEN}" | base64)"
-        echo "========================================="
+        echo "=========================================="
+        echo "✓ OIDC token retrieved (length: ${#OIDC_TOKEN})"
         echo ""
-        echo "✓ Successfully retrieved OIDC token (length: ${#OIDC_TOKEN})"
         
         # Exchange OIDC token for GitHub App installation token
         EXCHANGE_URL="${QODER_API_BASE_URL}/v1/github/oidc/token"
@@ -127,40 +126,35 @@ runs:
         
         TOKEN_RESPONSE=$(curl -sSf -X POST "${EXCHANGE_URL}" \
           -H "Content-Type: application/x-www-form-urlencoded" \
+          -H "X-Qoder-Personal-Access-Token: ${QODER_PERSONAL_ACCESS_TOKEN}" \
           -d "oidc_token=$(printf '%s' "${OIDC_TOKEN}" | jq -sRr '@uri')" 2>&1)
         
         if [ $? -ne 0 ]; then
-          echo "::warning::Failed to exchange token with Qoder backend: ${TOKEN_RESPONSE}"
-          echo "::warning::Will continue without GitHub App token. Some features may not work."
+          echo "::warning::Failed to exchange token: ${TOKEN_RESPONSE}"
+          echo "::warning::Will continue without GitHub App token."
           echo "app_token=" >> "$GITHUB_OUTPUT"
           exit 0
         fi
         
-        echo "Received response from token exchange"
-        
         INSTALLATION_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.installation_token // empty')
         
         if [ -z "${INSTALLATION_TOKEN}" ] || [ "${INSTALLATION_TOKEN}" = "null" ]; then
-          echo "::warning::\`installation_token\` not found in response"
-          echo "::warning::Response body: ${TOKEN_RESPONSE}"
-          echo "::warning::Will continue without GitHub App token. Some features may not work."
+          echo "::warning::installation_token not found in response"
+          echo "::warning::Will continue without GitHub App token."
           echo "app_token=" >> "$GITHUB_OUTPUT"
           exit 0
         fi
         
         echo "app_token=${INSTALLATION_TOKEN}" >> "$GITHUB_OUTPUT"
         echo "✓ Successfully exchanged OIDC token for installation_token"
-        
-        # Configure Git authentication with the App token
         echo ""
+        
+        # Configure Git authentication
         echo "Configuring Git authentication..."
         
-        # Use hardcoded Qoder GitHub App identity
         BOT_LOGIN="qoderai[bot]"
         BOT_ID="215938697"
-        echo "Using Qoder App identity: ${BOT_LOGIN} (ID: ${BOT_ID})"
         
-        # Determine noreply email domain based on GITHUB_SERVER_URL
         SERVER_HOST=$(echo "${GITHUB_SERVER_URL}" | sed 's|https\?://||' | sed 's|/.*||')
         if [ "${SERVER_HOST}" = "github.com" ]; then
           NOREPLY_DOMAIN="users.noreply.github.com"
@@ -168,71 +162,15 @@ runs:
           NOREPLY_DOMAIN="users.noreply.${SERVER_HOST}"
         fi
         
-        # Configure git user
-        echo "Configuring git user..."
         git config user.name "${BOT_LOGIN}"
         git config user.email "${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}"
-        echo "✓ Set git user as ${BOT_LOGIN} <${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}>"
+        echo "✓ Git user: ${BOT_LOGIN} <${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}>"
         
-        # Remove the authorization header that actions/checkout sets
-        echo "Removing existing git authentication headers..."
-        git config --unset-all "http.${GITHUB_SERVER_URL}/.extraheader" 2>/dev/null || echo "No existing authentication headers to remove"
+        git config --unset-all "http.${GITHUB_SERVER_URL}/.extraheader" 2>/dev/null || true
         
-        # Update the remote URL to include the token for authentication
-        echo "Updating remote URL with authentication token..."
         REMOTE_URL="https://x-access-token:${INSTALLATION_TOKEN}@${SERVER_HOST}/${GITHUB_REPOSITORY}.git"
         git remote set-url origin "${REMOTE_URL}"
-        echo "✓ Updated remote URL with authentication token"
-        
         echo "✓ Git authentication configured successfully"
-
-    - name: Verify Git Configuration
-      if: steps.auth.outputs.app_token != ''
-      shell: bash
-      run: |
-        echo "=== Git Configuration Verification ==="
-        echo ""
-        echo "Git User Configuration:"
-        echo "  user.name: $(git config user.name)"
-        echo "  user.email: $(git config user.email)"
-        echo ""
-        echo "Git Remote Configuration:"
-        git remote -v | sed 's/x-access-token:[^@]*/x-access-token:***/' || echo "Failed to get remote info"
-        echo ""
-        echo "Current Git Identity:"
-        git config --list | grep -E '^user\.' || echo "No user config found"
-        echo ""
-        echo "==============================="
-        echo ""
-        
-        # Test commit and push
-        echo "=== Testing Git Push Capability ==="
-        echo ""
-        
-        # Create a new test branch
-        TEST_BRANCH="qoder-test-$(date +%s)"
-        echo "Creating test branch: ${TEST_BRANCH}"
-        git checkout -b "${TEST_BRANCH}"
-        echo "✓ Created and checked out to ${TEST_BRANCH}"
-        
-        # Create a test file
-        TEST_FILE=".github/.qoder-test-$(date +%s).txt"
-        mkdir -p .github
-        echo "Test commit at $(date)" > "${TEST_FILE}"
-        echo "Created test file: ${TEST_FILE}"
-        
-        # Commit the test file
-        git add "${TEST_FILE}"
-        git commit -m "test: verify git push capability"
-        echo "✓ Test commit created"
-        
-        # Push to test branch
-        echo "Pushing to branch: ${TEST_BRANCH}"
-        git push origin "${TEST_BRANCH}"
-        echo "✓ Successfully pushed to ${TEST_BRANCH}"
-        
-        echo ""
-        echo "=== Git Push Test Completed ==="
 
     - name: Download qoder-github MCP Server
       shell: bash
