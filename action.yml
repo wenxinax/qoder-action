@@ -250,48 +250,20 @@ runs:
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_FLAGS: ${{ inputs.flags }}
       run: |
-        set +e  # Don't exit on error, we need to capture it
-        
-        # Debug: Print environment info
-        echo "=== Runtime Environment Debug Info ==="
-        echo "Current user: $(whoami)"
-        echo "HOME: ${HOME}"
-        echo "PWD: $(pwd)"
-        echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
-        echo ""
-        echo "=== $HOME/.qoder structure ==="
-        if [ -d "$HOME/.qoder" ]; then
-          ls -laR "$HOME/.qoder" || echo "Failed to list .qoder"
-        else
-          echo "::warning::$HOME/.qoder does not exist!"
-        fi
-        echo "=============================="
-        echo ""
+        set +e 
         
         # Prepare output files
         OUTPUT_FILE="/tmp/qoder-output-$(date +%s).log"
         ERROR_FILE="/tmp/qoder-error-$(date +%s).log"
         
-        # Build command arguments array
-        ARGS=()
-        ARGS+=("-w" "$GITHUB_WORKSPACE")
-        ARGS+=("--dangerously-skip-permissions")
+        # Build command arguments
+        ARGS=("-w" "$GITHUB_WORKSPACE" "--dangerously-skip-permissions")
         
-        # Add prompt if provided (use array to handle multi-line)
-        if [ -n "${INPUT_PROMPT}" ]; then
-          ARGS+=("-p" "${INPUT_PROMPT}")
-        fi
+        # Add prompt if provided
+        [ -n "${INPUT_PROMPT}" ] && ARGS+=("-p" "${INPUT_PROMPT}")
         
-        # Check if user specified output format in flags
-        USER_SPECIFIED_FORMAT=false
-        if [ -n "${INPUT_FLAGS}" ]; then
-          if echo "${INPUT_FLAGS}" | grep -qE '(^|\s)(-f|--output-format)(\s|$)'; then
-            USER_SPECIFIED_FORMAT=true
-          fi
-        fi
-        
-        # Add default output format if user didn't specify
-        if [ "${USER_SPECIFIED_FORMAT}" = false ]; then
+        # Add default output format if not specified by user
+        if ! echo "${INPUT_FLAGS}" | grep -qE '(^|\s)(-f|--output-format)(\s|$)'; then
           ARGS+=("-f" "stream-json")
         fi
         
@@ -299,9 +271,7 @@ runs:
         if [ -n "${INPUT_FLAGS}" ]; then
           while IFS= read -r line; do
             line=$(echo "$line" | xargs)
-            if [ -n "$line" ]; then
-              ARGS+=("$line")
-            fi
+            [ -n "$line" ] && ARGS+=("$line")
           done <<< "$INPUT_FLAGS"
         fi
         
@@ -309,34 +279,49 @@ runs:
         printf '  %s\n' "${ARGS[@]}"
         echo ""
         
-        # Execute qodercli and capture stdout and stderr separately
+        # Execute qodercli and capture stdout/stderr separately
         qodercli "${ARGS[@]}" > >(tee "$OUTPUT_FILE") 2> >(tee "$ERROR_FILE" >&2)
         EXIT_CODE=$?
-        
-        # Wait for background processes to finish
         wait
-        
-        echo ""
-        echo "Output file: ${OUTPUT_FILE}"
-        echo "Error file: ${ERROR_FILE}"
         
         # Set outputs
         echo "output_file=${OUTPUT_FILE}" >> "$GITHUB_OUTPUT"
-        
-        # Always set error output (may contain content even if exit code is 0)
         if [ -f "${ERROR_FILE}" ]; then
-          ERROR_CONTENT=$(cat "$ERROR_FILE")
           echo "error<<EOF" >> "$GITHUB_OUTPUT"
-          echo "${ERROR_CONTENT}" >> "$GITHUB_OUTPUT"
+          cat "$ERROR_FILE" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
         else
           echo "error=" >> "$GITHUB_OUTPUT"
         fi
         
+        # Handle execution result
         if [ $EXIT_CODE -eq 0 ]; then
-          echo "✓ qodercli executed successfully (exit code: 0)"
+          echo "✓ qodercli executed successfully"
+          echo "## ✅ Qodercli Execution Successful" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Exit Code:** 0" >> "$GITHUB_STEP_SUMMARY"
         else
           echo "::error::qodercli failed with exit code ${EXIT_CODE}"
+          
+          # Output error details to annotations
+          if [ -f "${ERROR_FILE}" ] && [ -s "${ERROR_FILE}" ]; then
+            echo "::error::Error details:"
+            cat "$ERROR_FILE" | while IFS= read -r line; do
+              echo "::error::  $line"
+            done
+          fi
+          
+          # Generate failure summary
+          echo "## ❌ Qodercli Execution Failed" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Exit Code:** ${EXIT_CODE}" >> "$GITHUB_STEP_SUMMARY"
+          
+          if [ -f "${ERROR_FILE}" ] && [ -s "${ERROR_FILE}" ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "### Error Details" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+            cat "$ERROR_FILE" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          
           exit $EXIT_CODE
         fi
 
