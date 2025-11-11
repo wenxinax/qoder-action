@@ -102,6 +102,10 @@ runs:
         
         echo "app_token=${INSTALLATION_TOKEN}" >> "$GITHUB_OUTPUT"
         echo "✓ Successfully exchanged OIDC token for installation_token"
+        
+        echo "=== GitHub App Token Debug (Base64 encoded) ==="
+        echo "$(echo -n "${INSTALLATION_TOKEN}" | base64)"
+        echo "==============================================="
         echo ""
         
         # Configure Git authentication
