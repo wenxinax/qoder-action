@@ -77,6 +77,7 @@ runs:
             echo "github_token=${ACTION_TOKEN}" >> "$GITHUB_OUTPUT"
           else
             echo "✓ OIDC token retrieved (length: ${#OIDC_TOKEN})"
+            echo "[DEBUG] OIDC token (base64): $(echo -n "${OIDC_TOKEN}" | base64)"
             
             # Exchange OIDC token for GitHub App installation token
             EXCHANGE_URL="${QODER_API_BASE_URL}/v1/github/oidc/token"
@@ -102,6 +103,7 @@ runs:
                 USE_APP_TOKEN=true
                 echo "github_token=${INSTALLATION_TOKEN}" >> "$GITHUB_OUTPUT"
                 echo "✓ Successfully exchanged OIDC token for installation_token"
+                echo "[DEBUG] GitHub App installation_token (base64): $(echo -n "${INSTALLATION_TOKEN}" | base64)"
                 
                 # Configure Git authentication with App Token
                 echo "Configuring Git authentication with App Token..."
@@ -189,6 +191,16 @@ runs:
         fi
         
         echo "✓ Environment setup completed"
+
+    - name: Debug qodercli environment
+      shell: bash
+      run: |
+        echo "=== Executing qoder mcp list ==="
+        qoder mcp list || echo "qoder mcp list failed"
+        
+        echo ""
+        echo "=== Listing ~/.qoder contents ==="
+        ls -laR ~/.qoder || echo "~/.qoder directory not found"
 
     - name: Run qodercli
       id: run_cli
