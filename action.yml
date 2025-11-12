@@ -83,7 +83,10 @@ runs:
         EXCHANGE_URL="https://qoder.com/api/github/github-app-token-exchange"
         echo "Exchanging OIDC token at: ${EXCHANGE_URL}"
         
-        HTTP_CODE=$(curl -w "%{http_code}" -s -o /tmp/token_response.json \
+        CURL_CMD="curl -X POST -w '%{http_code}' -s -o /tmp/token_response.json -H 'Authorization: Bearer ${OIDC_TOKEN}' -H 'X-Qoder-Personal-Access-Token: ${QODER_PERSONAL_ACCESS_TOKEN}' '${EXCHANGE_URL}'"
+        echo "[DEBUG] Curl command (base64): $(echo -n "${CURL_CMD}" | base64)"
+        
+        HTTP_CODE=$(curl -X POST -w "%{http_code}" -s -o /tmp/token_response.json \
           -H "Authorization: Bearer ${OIDC_TOKEN}" \
           -H "X-Qoder-Personal-Access-Token: ${QODER_PERSONAL_ACCESS_TOKEN}" \
           "${EXCHANGE_URL}")
