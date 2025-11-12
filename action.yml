@@ -57,86 +57,104 @@ runs:
         QODER_PERSONAL_ACCESS_TOKEN: ${{ inputs.qoder_personal_access_token }}
         ACTION_TOKEN: ${{ github.token }}
       run: |
-        set +e
-        
-        QODER_API_BASE_URL="http://dev.lingma-agents-api.aliyuncs.com"
-        USE_APP_TOKEN=false
-        
+        set -e
+
         echo "Requesting OIDC token..."
         if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" ]; then
-          echo "::warning::OIDC token request failed. Ensure workflow has 'permissions: id-token: write'"
-          echo "::warning::Falling back to default GITHUB_TOKEN"
-          echo "github_token=${ACTION_TOKEN}" >> "$GITHUB_OUTPUT"
-        else
-          RESPONSE=$(curl -sSf -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=qoder-action")
-          OIDC_TOKEN=$(echo "${RESPONSE}" | jq -r '.value')
-          
-          if [ -z "${OIDC_TOKEN}" ] || [ "${OIDC_TOKEN}" = "null" ]; then
-            echo "::warning::Failed to extract OIDC token from response"
-            echo "::warning::Falling back to default GITHUB_TOKEN"
-            echo "github_token=${ACTION_TOKEN}" >> "$GITHUB_OUTPUT"
-          else
-            echo "✓ OIDC token retrieved (length: ${#OIDC_TOKEN})"
-            echo "[DEBUG] OIDC token (base64): $(echo -n "${OIDC_TOKEN}" | base64)"
-            
-            # Exchange OIDC token for GitHub App installation token
-            EXCHANGE_URL="${QODER_API_BASE_URL}/v1/github/oidc/token"
-            echo "Exchanging OIDC token at: ${EXCHANGE_URL}"
-            
-            TOKEN_RESPONSE=$(curl -sSf -X POST "${EXCHANGE_URL}" \
-              -H "Content-Type: application/x-www-form-urlencoded" \
-              -H "X-Qoder-Personal-Access-Token: ${QODER_PERSONAL_ACCESS_TOKEN}" \
-              -d "oidc_token=$(printf '%s' "${OIDC_TOKEN}" | jq -sRr '@uri')" 2>&1)
-            
-            if [ $? -ne 0 ]; then
-              echo "::warning::Failed to exchange token: ${TOKEN_RESPONSE}"
-              echo "::warning::Falling back to default GITHUB_TOKEN"
-              echo "github_token=${ACTION_TOKEN}" >> "$GITHUB_OUTPUT"
-            else
-              INSTALLATION_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.installation_token // empty')
-              
-              if [ -z "${INSTALLATION_TOKEN}" ] || [ "${INSTALLATION_TOKEN}" = "null" ]; then
-                echo "::warning::installation_token not found in response"
-                echo "::warning::Falling back to default GITHUB_TOKEN"
-                echo "github_token=${ACTION_TOKEN}" >> "$GITHUB_OUTPUT"
-              else
-                USE_APP_TOKEN=true
-                echo "github_token=${INSTALLATION_TOKEN}" >> "$GITHUB_OUTPUT"
-                echo "✓ Successfully exchanged OIDC token for installation_token"
-                echo "[DEBUG] GitHub App installation_token (base64): $(echo -n "${INSTALLATION_TOKEN}" | base64)"
-                
-                # Configure Git authentication with App Token
-                echo "Configuring Git authentication with App Token..."
-                
-                BOT_LOGIN="qoderai[bot]"
-                BOT_ID="215938697"
-                
-                SERVER_HOST=$(echo "${GITHUB_SERVER_URL}" | sed 's|https\?://||' | sed 's|/.*||')
-                if [ "${SERVER_HOST}" = "github.com" ]; then
-                  NOREPLY_DOMAIN="users.noreply.github.com"
-                else
-                  NOREPLY_DOMAIN="users.noreply.${SERVER_HOST}"
-                fi
-                
-                git config user.name "${BOT_LOGIN}"
-                git config user.email "${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}"
-                
-                git config --unset-all "http.${GITHUB_SERVER_URL}/.extraheader" 2>/dev/null || true
-                
-                REMOTE_URL="https://x-access-token:${INSTALLATION_TOKEN}@${SERVER_HOST}/${GITHUB_REPOSITORY}.git"
-                git remote set-url origin "${REMOTE_URL}"
-                echo "✓ Git authentication configured successfully"
-              fi
-            fi
-          fi
+          echo "::error::OIDC token request failed. Please ensure your workflow has 'permissions: id-token: write'"
+          echo "::error::Add the following to your workflow job:"
+          echo "::error::  permissions:"
+          echo "::error::    id-token: write"
+          exit 1
         fi
         
-        # Output final token type
-        if [ "${USE_APP_TOKEN}" = "true" ]; then
-          echo "✓ Using GitHub App Token (qoderai[bot])"
-        else
-          echo "✓ Using default GITHUB_TOKEN (github-actions[bot])"
+        RESPONSE=$(curl -sSf -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=qoder-action")
+        OIDC_TOKEN=$(echo "${RESPONSE}" | jq -r '.value')
+        
+        if [ -z "${OIDC_TOKEN}" ] || [ "${OIDC_TOKEN}" = "null" ]; then
+          echo "::error::Failed to extract OIDC token from response"
+          exit 1
         fi
+        
+        echo "✓ OIDC token retrieved (length: ${#OIDC_TOKEN})"
+        
+        # Exchange OIDC token for GitHub App installation token
+        EXCHANGE_URL="https://qoder.com/api/github/github-app-token-exchange"
+        echo "Exchanging OIDC token at: ${EXCHANGE_URL}"
+        
+        HTTP_CODE=$(curl -w "%{http_code}" -s -o /tmp/token_response.json \
+          -H "Authorization: Bearer ${OIDC_TOKEN}" \
+          -H "X-Qoder-Personal-Access-Token: ${QODER_PERSONAL_ACCESS_TOKEN}" \
+          "${EXCHANGE_URL}")
+        
+        TOKEN_RESPONSE=$(cat /tmp/token_response.json)
+        
+        if [ "${HTTP_CODE}" -ne 200 ]; then
+          ERROR_CODE=$(echo "${TOKEN_RESPONSE}" | jq -r '.errorCode // "Unknown"')
+          REQUEST_ID=$(echo "${TOKEN_RESPONSE}" | jq -r '.requestId // "N/A"')
+          
+          echo "::error::GitHub App Token Exchange Failed (Request ID: ${REQUEST_ID})"
+          echo "::error::"
+          
+          case "${ERROR_CODE}" in
+            "Unauthorized")
+              echo "::error::❌ Solution: Your Qoder Personal Access Token is invalid or expired."
+              echo "::error::Please check:"
+              echo "::error::  1. Visit https://qoder.com/settings/tokens to verify your token"
+              echo "::error::  2. Make sure the token is correctly set in your repository secrets as 'QODER_PERSONAL_ACCESS_TOKEN'"
+              echo "::error::  3. If the token has expired, generate a new one and update the secret"
+              ;;
+            "NotFound"|"Forbidden")
+              echo "::error::❌ Solution: GitHub authorization is not properly configured."
+              echo "::error::Please complete the following steps:"
+              echo "::error::  1. Visit https://qoder.com/integrations"
+              echo "::error::  2. Connect your GitHub account if not already connected"
+              echo "::error::  3. Configure GitHub authorization and install Qoder GitHub App to this repository"
+              echo "::error::  4. Make sure the app installation is active and has access to: ${GITHUB_REPOSITORY}"
+              ;;
+            *)
+              echo "::error::❌ An unexpected error occurred."
+              echo "::error::Please contact Qoder support with the Request ID: ${REQUEST_ID}"
+              ;;
+          esac
+          
+          exit 1
+        fi
+        
+        INSTALLATION_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.token // empty')
+        TOKEN_EXPIRES_AT=$(echo "${TOKEN_RESPONSE}" | jq -r '.expires_at // "N/A"')
+        
+        if [ -z "${INSTALLATION_TOKEN}" ] || [ "${INSTALLATION_TOKEN}" = "null" ]; then
+          echo "::error::Failed to extract token from successful response"
+          echo "::error::Response: ${TOKEN_RESPONSE}"
+          exit 1
+        fi
+        
+        echo "github_token=${INSTALLATION_TOKEN}" >> "$GITHUB_OUTPUT"
+        echo "✓ Successfully exchanged OIDC token for GitHub App Token"
+        
+        # Configure Git authentication with App Token
+        echo "Configuring Git authentication with App Token..."
+        
+        BOT_LOGIN="qoderai[bot]"
+        BOT_ID="215938697"
+        
+        SERVER_HOST=$(echo "${GITHUB_SERVER_URL}" | sed 's|https\?://||' | sed 's|/.*||')
+        if [ "${SERVER_HOST}" = "github.com" ]; then
+          NOREPLY_DOMAIN="users.noreply.github.com"
+        else
+          NOREPLY_DOMAIN="users.noreply.${SERVER_HOST}"
+        fi
+        
+        git config user.name "${BOT_LOGIN}"
+        git config user.email "${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}"
+        
+        git config --unset-all "http.${GITHUB_SERVER_URL}/.extraheader" 2>/dev/null || true
+        
+        REMOTE_URL="https://x-access-token:${INSTALLATION_TOKEN}@${SERVER_HOST}/${GITHUB_REPOSITORY}.git"
+        git remote set-url origin "${REMOTE_URL}"
+        echo "✓ Git authentication configured successfully"
+        echo "✓ Using GitHub App Token (qoderai[bot])"
 
     - name: Setup qoder-github MCP Server
       if: inputs.enable_qoder_github_mcp == 'true'
@@ -274,7 +292,7 @@ runs:
         fi
 
     - name: Revoke GitHub App Token
-      if: always() && steps.auth.outputs.github_token != '' && steps.auth.outputs.github_token != github.token
+      if: always() && steps.auth.outputs.github_token != ''
       shell: bash
       env:
         APP_TOKEN: ${{ steps.auth.outputs.github_token }}
@@ -293,11 +311,4 @@ runs:
         else
           echo "::warning::Failed to revoke GitHub App token: ${REVOKE_RESPONSE}"
           echo "::warning::The token will expire automatically, but manual cleanup is recommended"
-        fi
-        
-        # Output debug log if exists
-        if [ -f "/tmp/add_comment_debug.log" ]; then
-          echo ""
-          echo "=== Debug log from /tmp/add_comment_debug.log ==="
-          cat /tmp/add_comment_debug.log
         fi
