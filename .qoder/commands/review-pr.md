@@ -19,6 +19,7 @@ Context Info: $ARGUMENTS
   * Read: 查看特定文件内容
   * Grep: 搜索代码模式、函数定义、引用关系
   * MCP 工具: `mcp__qoder_github__*` (获取 PR 信息、获取 PR diff、提交评论等)
+  * **任务管理**: TodoWrite 工具（用于组织工作计划、追踪任务状态）
 - 权限边界:
   * 只读: 所有 Bash 命令
   * 写操作: 必须使用 `mcp__qoder_github__*` 工具
@@ -80,6 +81,10 @@ Context Info: $ARGUMENTS
 
 **重要提示**: 必须按顺序完成以下所有步骤，直到步骤 6 提交 Review 成功后才能结束。
 
+**任务管理规范**:
+- 在开始执行前，使用 **TodoWrite** 工具创建任务列表，列出所有主要步骤
+- 每完成一个步骤，使用 TodoWrite 追踪任务状态
+
 ### 1. 调用子 Agents（并行执行）
 - 调用 `code-analyzer` 和 `test-analyzer`
 - 失败处理: 某个 agent 失败不阻塞，继续处理其他结果
@@ -130,10 +135,16 @@ d. **重新生成 suggestion**（如果适用）
    - 不直接采纳子 agent 的 suggestion
    - 基于合并后的综合评论，重新生成一个统一的 suggestion
    - 仅当修复明确且简单时提供（单行或 < 20 行修改）
+   - **生成后必须验证**:
+     * 使用 Read 工具读取 `path` 文件的 `[startLine, line]` 行内容
+       - 参数: `file_path`=绝对路径, `offset`=startLine, `limit`=line-startLine+1
+     * 验证 suggestion 的第一行是否与 startLine 的内容匹配，最后一行是否与 line 的内容匹配
+     * 如果不匹配，必须调整 startLine/line 或补充/删减 suggestion 内容
    - suggestion 必须:
      * 同时解决该代码块的所有主要问题
      * 语法正确、缩进一致
      * 不包含 diff 标记
+     * **能完整替换 `[startLine, line]` 范围的所有代码**
    - 如果修改复杂或涉及多个位置，不提供 suggestion，用文字描述修复方案
 
 e. **精确去重与相似检测**
@@ -175,7 +186,15 @@ f. **内容质量检查**
 
 **Suggestion 代码块约束**:
 - 若 body 中包含 ```suggestion 代码块，其内容必须能完整替换 `[startLine, line]` 范围内的所有代码
-- Suggestion 的行数应与原始范围大致匹配（允许适度增减）
+- **精准验证机制**（必须执行）:
+  * 使用 Read 工具读取 `path` 文件的 `[startLine, line]` 行内容
+    - 参数: `file_path`=项目根目录+path, `offset`=startLine, `limit`=line-startLine+1
+  * 对比 suggestion 代码块与原始代码的语义和结构
+  * 如果 suggestion 无法直接替换原是代码块，则必须调整:
+    - 选项 1: 修正 `startLine` 值，使其与 suggestion 的实际替换范围匹配
+    - 选项 2: 补充 suggestion 内容，使其能完整替换 `[startLine, line]`
+    - 选项 3: 删除 suggestion，改为纯文字描述 + 伪代码
+  * 验证通过标准: suggestion 的第一行应对应 startLine，最后一行应对应 line
 - 若不符合规范，该用文字结合伪代码描述
 
 ### 6. 生成并提交 Summary（一次性提交）
