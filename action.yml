@@ -22,6 +22,11 @@ inputs:
   qoder_personal_access_token:
     description: 'Qoder personal access token for authentication'
     required: true
+  
+  enable_qoder_github_mcp:
+    description: 'Enable qoder-github MCP Server for enhanced GitHub operations'
+    required: false
+    default: 'true'
 
 outputs:
   output_file:
@@ -132,6 +137,7 @@ runs:
         echo "✓ Git authentication configured successfully"
 
     - name: Setup qoder-github MCP Server
+      if: inputs.enable_qoder_github_mcp == 'true'
       shell: bash
       env:
         GITHUB_TOKEN: ${{ steps.auth.outputs.app_token }}
@@ -139,7 +145,7 @@ runs:
         GITHUB_REPO: ${{ github.event.repository.name }}
       run: |
         echo "Downloading qoder-github MCP server..."
-        curl -fsSL https://download.qoder.com/qodercli/mcp/qoder-github-mcp-server -o /tmp/qoder-github-mcp-server
+        curl -fsSL https://download.qoder.com/qodercli/mcp/releases/beta/reqoder-github-mcp-server -o /tmp/qoder-github-mcp-server
         chmod +x /tmp/qoder-github-mcp-server
         sudo mv /tmp/qoder-github-mcp-server /usr/local/bin/qoder-github-mcp-server
         echo "✓ qoder-github MCP server installed"
