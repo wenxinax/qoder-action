@@ -184,6 +184,14 @@ f. **内容质量检查**
   * Diff chunk 由 `@@` 标记分隔，代表一段连续的变更区域
   * 若跨越 chunk，GitHub 将拒绝该评论
 
+**失败处理策略**:
+- 如果 `add_comment_to_pending_review` 调用失败：
+  * **不要尝试重新发送该评论**
+  * 将该评论内容记录下来，加入到 Summary 中
+  * 在 Summary 的相应 severity 分组下添加，并注明文件和行号
+  * 示例格式: `- [文件 src/utils.ts:第 45 行] 该代码块存在空指针风险...`
+  * 继续处理下一条评论，不阻塞整个流程
+
 **Suggestion 代码块约束**:
 - 若 body 中包含 ```suggestion 代码块，其内容必须能完整替换 `[startLine, line]` 范围内的所有代码
 - **精准验证机制**（必须执行）:
