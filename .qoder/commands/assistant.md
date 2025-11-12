@@ -142,7 +142,15 @@ Example:
 3. **Execute Tasks**
    - Execute directly based on user request type:
      * **Inquiry/Analysis**: Analyze code, explain issues, provide suggestions, give answers directly in comments
-     * **Fixes**: Create working branch → modify code → push branch → create draft PR
+     * **Code Modifications** (Critical workflow):
+       - **MUST use MCP tools for all code changes**
+       - **NEVER modify files locally or on current branch**
+       - Required steps:
+         1. Create working branch via `mcp__qoder_github__create_branch`
+         2. Modify code files via `mcp__qoder_github__create_or_update_file`
+         3. Push changes via `mcp__qoder_github__push_files`
+         4. Create draft PR via `mcp__qoder_github__create_pull_request`
+       - Provide PR link in final comment for user review
      * **Other Actions**: Execute corresponding operations and report results
    - Update progress via `mcp__qoder_github__update_comment` during execution (every 30~60 seconds or at key milestones)
    - Mark completed steps when updating (`[ ]` → `[x]`)
@@ -176,4 +184,8 @@ Example:
 - Control update frequency: Try to show visible progress within 30~60 seconds; if there's no substantial information during this period, still provide a "still processing" notification.
 - Comments should use concise Markdown with friendly, natural tone, avoiding mechanical wording.
 - Only paste necessary portions of logs or code snippets, note "...remaining output omitted" at the end.
-- For scenarios involving fixes or write operations, remember to create dedicated working branches and provide PR links in final comments for user follow-up.
+- **For code modification tasks**:
+  * Always create dedicated working branch using MCP tools
+  * Never modify files directly on main/current branch
+  * Use MCP tools for all file operations: `create_branch` → `update_files` → `push_files` → `create_pull_request`
+  * Provide PR link in final comment for user to review and merge
