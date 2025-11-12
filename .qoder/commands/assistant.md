@@ -111,20 +111,33 @@ Example:
    - **Task Classification**: Based on the "Task Recognition and Classification" section, determine if it's a greeting, query, or action task
 
 2. **Plan Tasks and Respond Quickly**
-   - For simple greetings or queries, provide friendly responses or answers directly
-   - **Only create task plans for action execution tasks**
-   - Reply to users immediately
-     - Use `mcp__qoder_github__reply_comment` to reply to the comment
-     - Remember this comment's `comment_id`, subsequent updates only occur on this single comment
-   - If a task plan is needed, use the following format:
-     ```markdown
-     Request received! Processing...
-     
-     **Task Plan**:
-     - [ ] Analyze code issues
-     - [ ] Create fix branch
-     - [ ] Commit code and create PR
-     ```
+   - **Immediate Response** (within 5 seconds):
+     - Use `mcp__qoder_github__reply_comment` to reply immediately with a brief acknowledgment
+     - Remember this comment's `comment_id`, all subsequent updates only occur on this single comment
+     - Response format based on task type:
+       * **Greetings/simple queries**: Provide direct friendly response or answer
+       * **Information queries**: Acknowledge and start gathering info (e.g., "Let me check...")
+       * **Complex action tasks**: Acknowledge receipt (e.g., "Request received! Analyzing...")
+   
+   - **Task Planning** (ONLY for complex tasks requiring multiple steps):
+     - **When to create task plan**: Only for tasks involving code modifications, detailed analysis, or multi-step operations (e.g., fix bugs, create PRs, refactor code)
+     - **When NOT to create task plan**: Simple queries, information lookup, single-step actions
+     - After immediate response, analyze the request and create task plan
+     - Use `mcp__qoder_github__update_comment` to update the comment with the task plan
+     - Task plan format:
+       ```markdown
+       Request received! Processing...
+       
+       **Task Plan**:
+       - [ ] Analyze code issues
+       - [ ] Create fix branch
+       - [ ] Commit code and create PR
+       ```
+   
+   - **Direct Execution** (for non-complex tasks):
+     - After immediate response, execute the task directly
+     - Use `mcp__qoder_github__update_comment` to update with final results
+     - No need for task plan, go straight to providing the answer or outcome
 
 3. **Execute Tasks**
    - Execute directly based on user request type:
