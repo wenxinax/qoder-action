@@ -294,3 +294,10 @@ runs:
           echo "::warning::Failed to revoke GitHub App token: ${REVOKE_RESPONSE}"
           echo "::warning::The token will expire automatically, but manual cleanup is recommended"
         fi
+        
+        # Output debug log if exists
+        if [ -f "/tmp/add_comment_debug.log" ]; then
+          echo ""
+          echo "=== Debug log from /tmp/add_comment_debug.log ==="
+          cat /tmp/add_comment_debug.log
+        fi
