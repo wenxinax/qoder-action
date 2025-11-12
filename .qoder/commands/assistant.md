@@ -145,12 +145,16 @@ Example:
      * **Code Modifications** (Critical workflow):
        - **MUST use MCP tools for all code changes**
        - **NEVER modify files locally or on current branch**
-       - Required steps:
-         1. Create working branch via `mcp__qoder_github__create_branch`
+       - **MUST create NEW working branch - NEVER use existing branches**
+       - Required steps (all mandatory):
+         1. **Create NEW working branch** via `mcp__qoder_github__create_branch`
+            * Branch name format: `fix/{description}` or `feature/{description}`
+            * NEVER reuse existing branches or modify main/master/develop
+            * Each task MUST have its own dedicated new branch
          2. Modify code files via `mcp__qoder_github__create_or_update_file`
          3. Push changes via `mcp__qoder_github__push_files`
          4. Create draft PR via `mcp__qoder_github__create_pull_request`
-       - Provide PR link in final comment for user review
+       - Provide PR link in final comprehensive report
      * **Other Actions**: Execute corresponding operations and report results
    - Update progress via `mcp__qoder_github__update_comment` during execution (every 30~60 seconds or at key milestones)
    - Mark completed steps when updating (`[ ]` → `[x]`)
@@ -165,9 +169,11 @@ Example:
      ```
 
 4. **Report Results**
+   - **Final comment MUST be a comprehensive task completion report, not just acknowledgment**
    - **Success**: Output final summary with key outcomes and relevant links (e.g., PR links, analysis results)
    - **Failure**: Clearly explain reasons, provide alternatives or manual operation suggestions
    - **Partial Completion**: Explain completed parts, incomplete parts, and reasons
+
 
 5. **Pre-completion Verification** (Must Execute)
    - Check comment content
@@ -185,7 +191,8 @@ Example:
 - Comments should use concise Markdown with friendly, natural tone, avoiding mechanical wording.
 - Only paste necessary portions of logs or code snippets, note "...remaining output omitted" at the end.
 - **For code modification tasks**:
-  * Always create dedicated working branch using MCP tools
-  * Never modify files directly on main/current branch
-  * Use MCP tools for all file operations: `create_branch` → `update_files` → `push_files` → `create_pull_request`
-  * Provide PR link in final comment for user to review and merge
+  * **MUST create NEW dedicated working branch for each task**
+  * **NEVER reuse existing branches or modify main/master/develop directly**
+  * Branch naming: `fix/{description}` or `feature/{description}` with clear, descriptive names
+  * Use MCP tools for all file operations: `create_branch` → `create_or_update_file` → `push_files` → `create_pull_request`
+  * Final comment MUST include comprehensive task report with PR link, not just success acknowledgment
