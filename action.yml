@@ -89,6 +89,9 @@ runs:
         
         TOKEN_RESPONSE=$(cat /tmp/token_response.json)
         
+        echo "[DEBUG] HTTP Status: ${HTTP_CODE}"
+        echo "[DEBUG] Response Body: ${TOKEN_RESPONSE}"
+        
         if [ "${HTTP_CODE}" -ne 200 ]; then
           ERROR_CODE=$(echo "${TOKEN_RESPONSE}" | jq -r '.errorCode // "Unknown"')
           REQUEST_ID=$(echo "${TOKEN_RESPONSE}" | jq -r '.requestId // "N/A"')
