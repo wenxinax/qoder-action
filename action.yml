@@ -173,53 +173,20 @@ runs:
 
     - name: Setup qodercli environment
       shell: bash
-      env:
-        QODER_PERSONAL_ACCESS_TOKEN: ${{ inputs.qoder_personal_access_token }}
-        GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
       run: |
         set -e
         
         echo "Setting up qodercli environment..."
-        
-        # Debug: Print current user and home directory
-        echo "=== Environment Debug Info ==="
-        echo "Current user: $(whoami)"
-        echo "HOME: ${HOME}"
-        echo "PWD: $(pwd)"
-        echo "GITHUB_ACTION_PATH: ${GITHUB_ACTION_PATH}"
-        echo "=============================="
-        echo ""
-        
-        # Create .qoder directory in home
+
+        # Create .qoder directory
         mkdir -p "$HOME/.qoder/commands" "$HOME/.qoder/subagents"
         
-        # Copy built-in resources if they exist
+        # Copy built-in resources
         if [ -d "${GITHUB_ACTION_PATH}/.qoder" ]; then
-          echo "Installing built-in commands and subagents..."
-          echo "Source: ${GITHUB_ACTION_PATH}/.qoder"
-          echo ""
-          
-          # Show source structure
-          echo "=== Source .qoder structure ==="
-          ls -laR "${GITHUB_ACTION_PATH}/.qoder" || echo "Failed to list source"
-          echo "=============================="
-          echo ""
-          
-          cp -R "${GITHUB_ACTION_PATH}/.qoder/"* "$HOME/.qoder/" 2>/dev/null || true
-          
-          # Show destination structure
-          echo "=== Destination $HOME/.qoder structure ==="
-          ls -laR "$HOME/.qoder" || echo "Failed to list destination"
-          echo "=============================="
-          echo ""
-        else
-          echo "::warning::No built-in resources found at ${GITHUB_ACTION_PATH}/.qoder"
-          echo "Checking if .qoder exists in action path:"
-          ls -la "${GITHUB_ACTION_PATH}" || true
+          cp -R "${GITHUB_ACTION_PATH}/.qoder/"* "$HOME/.qoder/" 2>/dev/null && \
+            echo "✓ Built-in resources installed" || \
+            echo "::warning::Failed to copy built-in resources"
         fi
-        
-        # Inject environment variables for qodercli
-        echo "QODER_PERSONAL_ACCESS_TOKEN=${QODER_PERSONAL_ACCESS_TOKEN}" >> "$GITHUB_ENV"
         
         echo "✓ Environment setup completed"
 
@@ -227,6 +194,8 @@ runs:
       id: run_cli
       shell: bash
       env:
+        QODER_PERSONAL_ACCESS_TOKEN: ${{ inputs.qoder_personal_access_token }}
+        GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_FLAGS: ${{ inputs.flags }}
       run: |
