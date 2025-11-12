@@ -195,8 +195,8 @@ runs:
     - name: Debug qodercli environment
       shell: bash
       run: |
-        echo "=== Executing qoder mcp list ==="
-        qoder mcp list || echo "qoder mcp list failed"
+        echo "=== Executing qodercli mcp list ==="
+        qodercli mcp list || echo "qodercli mcp list failed"
         
         echo ""
         echo "=== Listing ~/.qoder contents ==="
