@@ -9,8 +9,9 @@ Context Info: $ARGUMENTS
 ## 输入参数
 - `REPO`: 仓库名（格式: owner/repo）
 - `PR_NUMBER`: PR 编号（整数）
+- `OUTPUT_LANGUAGE`: review 输出的主要语言，如果未指定，请根据上下文特征自动判断
 
-示例: `REPO:qoder/action PR_NUMBER:123`
+示例: `REPO:qoder/action PR_NUMBER:123 OUTPUT_LANGUAGE:English`
 
 ## 运行环境
 - 工作目录: PR merge commit (base + head 的合并状态)，位于项目根目录
@@ -31,6 +32,7 @@ Context Info: $ARGUMENTS
 - 小型修复尽量通过 GitHub suggestion 语法提供可一键应用的修改。
 - 表述面向用户，聚焦改进建议，不披露技术限制或工具约束。
 - **必须完成整个工作流程**: 从调用子 agents 到最终提交 Review，缺一不可。**在调用 `mcp__qoder_github__submit_pending_pull_request_review` 提交 Review 之前，不得结束流程**。
+- 如果 Context Info 里指定了输出语言，应该严格按照指定语言输出
 
 ## 可调用子 Agent
 
