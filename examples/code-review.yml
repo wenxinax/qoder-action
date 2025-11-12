@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  review:
+  qoder-review:
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -7,7 +7,7 @@ on:
     types: [created]
 
 jobs:
-  assistant:
+  qoder-assistant:
     if: contains(github.event.comment.body, '@qoder')
     runs-on: ubuntu-latest
     permissions:
