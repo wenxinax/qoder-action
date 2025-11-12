@@ -125,7 +125,6 @@ runs:
                 git remote set-url origin "${REMOTE_URL}"
                 echo "✓ Git authentication configured successfully"
               fi
-              fi
             fi
           fi
         fi
