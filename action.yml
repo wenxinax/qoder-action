@@ -112,7 +112,6 @@ runs:
               echo "::error::  1. Visit https://qoder.com/integrations"
               echo "::error::  2. Connect your GitHub account if not already connected"
               echo "::error::  3. Configure GitHub authorization and install Qoder GitHub App to this repository"
-              echo "::error::  4. Make sure the app installation is active and has access to: ${GITHUB_REPOSITORY}"
               ;;
             *)
               echo "::error::❌ An unexpected error occurred."
