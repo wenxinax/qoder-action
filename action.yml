@@ -14,8 +14,8 @@ inputs:
   flags:
     description: |
       Additional CLI arguments to pass to qodercli.
-      Each line should be a valid flag (e.g., --max-turns 10).
       Multiple lines are supported.
+      Each line should be a valid flag.
     required: false
     default: ''
   
@@ -43,6 +43,7 @@ runs:
     - name: Install qodercli
       shell: bash
       run: |
+        # todo 上线前改成 yum install
         echo "Downloading qodercli binary..."
         curl -fsSL https://qcli-aone.oss-cn-hangzhou.aliyuncs.com/github/qodercli -o /tmp/qodercli
         chmod +x /tmp/qodercli
@@ -77,14 +78,11 @@ runs:
         fi
         
         echo "✓ OIDC token retrieved (length: ${#OIDC_TOKEN})"
-        echo "[DEBUG] OIDC token (base64): $(echo -n "${OIDC_TOKEN}" | base64)"
         
         # Exchange OIDC token for GitHub App installation token
         EXCHANGE_URL="https://qoder.com/api/github/github-app-token-exchange"
-        echo "Exchanging OIDC token at: ${EXCHANGE_URL}"
         
         CURL_CMD="curl -X POST -w '%{http_code}' -s -o /tmp/token_response.json -H 'Authorization: Bearer ${OIDC_TOKEN}' -H 'X-Qoder-Personal-Access-Token: ${QODER_PERSONAL_ACCESS_TOKEN}' '${EXCHANGE_URL}'"
-        echo "[DEBUG] Curl command (base64): $(echo -n "${CURL_CMD}" | base64)"
         
         HTTP_CODE=$(curl -X POST -w "%{http_code}" -s -o /tmp/token_response.json \
           -H "Authorization: Bearer ${OIDC_TOKEN}" \
@@ -92,9 +90,6 @@ runs:
           "${EXCHANGE_URL}")
         
         TOKEN_RESPONSE=$(cat /tmp/token_response.json)
-        
-        echo "[DEBUG] HTTP Status: ${HTTP_CODE}"
-        echo "[DEBUG] Response Body: ${TOKEN_RESPONSE}"
         
         if [ "${HTTP_CODE}" -ne 200 ]; then
           ERROR_CODE=$(echo "${TOKEN_RESPONSE}" | jq -r '.errorCode // "Unknown"')
@@ -216,16 +211,6 @@ runs:
         fi
         
         echo "✓ Environment setup completed"
-
-    - name: Debug qodercli environment
-      shell: bash
-      run: |
-        echo "=== Executing qodercli mcp list ==="
-        qodercli mcp list || echo "qodercli mcp list failed"
-        
-        echo ""
-        echo "=== Listing ~/.qoder contents ==="
-        ls -laR ~/.qoder || echo "~/.qoder directory not found"
 
     - name: Run qodercli
       id: run_cli
