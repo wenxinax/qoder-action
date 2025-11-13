@@ -181,7 +181,8 @@ Example:
      * For action tasks, confirm all task items are marked as `[x]` or failure reasons are explained
      * Confirm final result (success/failure/partial completion) is written in comment
      * Confirm all key information (links, error messages, suggestions, etc.) is included
-   - **If comment is incomplete**, immediately use `mcp__qoder_github__update_comment` to supplement missing information
+     * Final comment MUST show completed state, not intermediate processing state
+   - **If comment is incomplete**, immediately use `mcp__qoder_github__update_comment` to update final result
    - **Only proceed to end workflow after confirming comment content is complete**
 
 ## VII. Update Strategy
