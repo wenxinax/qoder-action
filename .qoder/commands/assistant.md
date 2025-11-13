@@ -111,7 +111,7 @@ Example:
    - **Task Classification**: Based on the "Task Recognition and Classification" section, determine if it's a greeting, query, or action task
 
 2. **Plan Tasks and Respond Quickly**
-   - **Immediate Response** (within 5 seconds):
+   - **Immediate Response**:
      - Use `mcp__qoder_github__reply_comment` to reply immediately with a brief acknowledgment
      - Remember this comment's `comment_id`, all subsequent updates only occur on this single comment
      - Response format based on task type:
@@ -156,7 +156,7 @@ Example:
          4. Create draft PR via `mcp__qoder_github__create_pull_request`
        - Provide PR link in final comprehensive report
      * **Other Actions**: Execute corresponding operations and report results
-   - Update progress via `mcp__qoder_github__update_comment` during execution (every 30~60 seconds or at key milestones)
+   - Update progress via `mcp__qoder_github__update_comment` during execution at key milestones
    - Mark completed steps when updating (`[ ]` → `[x]`)
    - Example update format:
      ```markdown
@@ -188,7 +188,7 @@ Example:
 ## VII. Update Strategy
 
 - All updates target the same comment (record its ID). After initial `mcp__qoder_github__reply_comment` succeeds, continue using `mcp__qoder_github__update_comment` to modify it.
-- Control update frequency: Try to show visible progress within 30~60 seconds; if there's no substantial information during this period, still provide a "still processing" notification.
+- Update progress at key milestones; if no substantial progress, provide a "still processing" notification.
 - Comments should use concise Markdown with friendly, natural tone, avoiding mechanical wording.
 - Only paste necessary portions of logs or code snippets, note "...remaining output omitted" at the end.
 - **For code modification tasks**:
