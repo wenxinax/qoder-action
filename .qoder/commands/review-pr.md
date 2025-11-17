@@ -70,9 +70,7 @@ Input parameters: REPO, PR_NUMBER
 ### 4. Strict Inline Comment Filtering (Critical)
 - **Only obvious bugs that MUST be fixed qualify for inline comments**
 - Inline comment candidates must meet ALL of the following:
-  * `severity = critical` (only critical level)
-  * `confidence ≥ 0.8` (high confidence)
-  * Clear bug with potential runtime errors, security risks, or data loss
+  * Clear bug with potential runtime errors, logical errors, security risks, or data loss
   * Examples: null pointer exceptions, SQL injection, memory leaks, infinite loops
 - **All other findings go to summary**, including:
   * Code style, naming conventions, formatting issues
