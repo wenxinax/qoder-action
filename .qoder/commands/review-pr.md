@@ -28,8 +28,7 @@ Example: `REPO:qoder/action PR_NUMBER:123 OUTPUT_LANGUAGE:English`
 
 ## Critical Constraints
 - Only one Review per run is allowed. Do not create any other standalone comments, discussions, or multiple submissions.
-- Inline comments must be localizable to new lines (RIGHT side) in the PR; suggestions or macro-level observations that cannot be located should only be written in the summary.
-- For minor fixes, provide one-click applicable modifications via GitHub suggestion syntax whenever possible.
+- Inline comments must be localizable to new lines (RIGHT side) in the PR; macro-level observations that cannot be located should only be written in the summary.
 - Expression should be user-oriented, focusing on improvement suggestions without disclosing technical limitations or tool constraints.
 - **Must complete the entire workflow**: From invoking sub-agents to final Review submission, every step is essential. **Do not end the process before calling `mcp__qoder_github__submit_pending_pull_request_review` to submit the Review**.
 - If output language is specified in Context Info, strictly follow the specified language
@@ -68,12 +67,24 @@ Input parameters: REPO, PR_NUMBER
 - **Similarity detection**: Title edit distance < 30% or contains same keywords → deduplicate, keep the more specific one with suggestion
 - **Conflict adjudication**: Same location with different fix directions → choose the better one, put the other as "alternative" in summary
 
-### 4. Confidence Threshold
-- Inline comment candidates: `severity` ∈ {critical, high, medium} and `confidence ≥ 0.6`
-- low/nit level: Default `summary_only=true`, merge into summary
+### 4. Strict Inline Comment Filtering (Critical)
+- **Only obvious bugs that MUST be fixed qualify for inline comments**
+- Inline comment candidates must meet ALL of the following:
+  * `severity = critical` (only critical level)
+  * `confidence ≥ 0.8` (high confidence)
+  * Clear bug with potential runtime errors, security risks, or data loss
+  * Examples: null pointer exceptions, SQL injection, memory leaks, infinite loops
+- **All other findings go to summary**, including:
+  * Code style, naming conventions, formatting issues
+  * Performance optimization suggestions
+  * Best practice recommendations
+  * Medium/low/nit severity items
+  * Refactoring suggestions
+  * Test coverage suggestions
 
 ### 5. Content Quality Check
-- For each review comment, must collect sufficient context for verification; do not publish uncertain or insufficiently evidenced items
+- **Minimize inline comments**: Only include obvious bugs that must be fixed
+- For each inline comment candidate, ask: "Is this a clear bug that will cause problems?" If uncertain, move to summary
 - Body length < 2000 characters (GitHub limitation)
 - Title concise and clear (< 80 characters)
 - Remove sub-agent metadata (confidence/tags, etc., users don't need to see these)
@@ -87,7 +98,7 @@ Input parameters: REPO, PR_NUMBER
 - Before execution begins, use **TodoWrite** tool to create task list, listing all major steps
 - Track task status using TodoWrite upon completing each step
 
-### 1. Invoke Sub-Agents (Parallel Execution)
+### 1. Invoke Sub-Agents
 - Invoke `code-analyzer` and `test-analyzer`
 - Failure handling: If an agent fails, don't block; continue processing other results
 
@@ -96,9 +107,8 @@ Input parameters: REPO, PR_NUMBER
   * Changed files list
   * PR title and description
 - Call `mcp__qoder_github__get_pull_request_diff` to get change diff
-- Parse diff, extract line number ranges for all new/modified lines
 
-### 3. Verify and Filter (Quality Gate)
+### 3. Verify and Filter
 Execute step by step according to above "Verification and Filtering Guidelines":
 
 a. **Proactively Gather Context**
@@ -133,29 +143,14 @@ c. **Reorganize Comments by Code Block Location** (Critical Step)
      3. **[Hint] Missing comment**: Suggest adding function description
      ```
 
-d. **Regenerate Suggestion** (If Applicable)
-   - Don't directly adopt sub-agent's suggestion
-   - Regenerate a unified suggestion based on merged comprehensive comment
-   - Only provide when fix is clear and simple (single line or < 20 line modification)
-   - **Must verify after generation**:
-     * Use Read tool to read `[startLine, line]` content of `path` file
-       - Parameters: `file_path`=absolute path, `offset`=startLine, `limit`=line-startLine+1
-     * Verify if suggestion's first line matches startLine content, last line matches line content
-     * If mismatch, must adjust startLine/line or add/remove suggestion content
-   - Suggestion must:
-     * Simultaneously solve all major issues in the code block
-     * Be syntactically correct with consistent indentation
-     * Not include diff markers
-     * **Be able to completely replace all code in `[startLine, line]` range**
-   - If modification is complex or involves multiple locations, don't provide suggestion, describe fix plan in text
-
-e. **Exact Deduplication and Similarity Detection**
+d. **Exact Deduplication and Similarity Detection**
    - path + new_line exactly same → already merged in step c
    - title similarity > 70% → keep the more specific one
 
-e. **Apply Confidence Threshold Filter**
-   - Inline comment candidates: severity ∈ {critical, high, medium} and confidence ≥ 0.6
-   - low/nit level: Set to summary_only=true
+e. **Apply Strict Inline Comment Filter** (Critical Quality Gate)
+   - **Only severity=critical AND confidence≥0.8 AND clear bug** → inline comment
+   - **All other findings** → Set summary_only=true, categorize into summary
+   - When in doubt, prefer summary over inline comment
 
 f. **Content Quality Check**
    - Body length < 2000 characters
@@ -165,15 +160,16 @@ f. **Content Quality Check**
 ### 4. Create Pending Review
 - Call `mcp__qoder_github__create_pending_pull_request_review`
 
-### 5. Add Inline Comments
+### 5. Add Inline Comments (Minimal and High-Quality Only)
 
-For each reorganized and verified comment:
+**Important**: Only add inline comments for obvious bugs that MUST be fixed. All other suggestions go to summary.
+
+For each reorganized and verified comment that meets strict criteria:
 
 **Call `mcp__qoder_github__add_comment_to_pending_review`**
 
 Required parameters:
 - `body`: Merged comment content generated in step 3.c
-  * If contains suggestion code block, must be the regenerated version from step 3.d
 - `path`: Relative path
 - `pull_number`: PR number
 - `subjectType`: Set to `"LINE"`
@@ -194,19 +190,6 @@ Choose parameters based on comment range:
   * Example format: `- [File src/utils.ts:Line 45] This code block has null pointer risk...`
   * Continue processing next comment, don't block entire workflow
 
-**Suggestion Code Block Constraints**:
-- If body contains ```suggestion code block, its content must be able to completely replace all code in `[startLine, line]` range
-- **Precise Verification Mechanism** (Must Execute):
-  * Use Read tool to read `[startLine, line]` content of `path` file
-    - Parameters: `file_path`=project root+path, `offset`=startLine, `limit`=line-startLine+1
-  * Compare semantics and structure of suggestion code block with original code
-  * If suggestion cannot directly replace original code block, must adjust:
-    - Option 1: Correct `startLine` value to match suggestion's actual replacement range
-    - Option 2: Supplement suggestion content so it can completely replace `[startLine, line]`
-    - Option 3: Remove suggestion, change to pure text description + pseudocode
-  * Verification pass standard: suggestion's first line should correspond to startLine, last line to line
-- If not compliant, use text combined with pseudocode description
-
 ### 6. Generate and Submit Summary (Submit Once)
 
 Summary structure (Markdown):
@@ -215,20 +198,27 @@ Summary structure (Markdown):
 ## 🎯 Change Overview
 [1-2 sentences summarizing main changes in this PR]
 
-## 🚨 Issues Requiring Attention
-### Critical/High
-- [Blocking issues grouped by severity]
+## 🚨 Critical Bugs (Must Fix)
+- [Only obvious bugs that will cause runtime errors, security issues, or data problems]
 
-### Medium
-- [Medium priority issues]
+## 💡 Code Quality Suggestions
+### High Priority
+- [Important but non-blocking improvements]
+
+### Medium Priority
+- [Medium priority suggestions including style, naming, refactoring]
+
+### Low Priority  
+- [Minor improvements, best practices, nit-level suggestions]
 
 ## 🧪 Test Analysis
 - [Test run results or static analysis conclusions, user-oriented expression]
 - [Example: "Suggest supplementing boundary condition tests" instead of "test run failed"]
 
-## 💡 Improvement Suggestions
-- [Non-blocking suggestions, best practices, future optimization directions]
-- [Summary of low/nit level suggestions]
+## 🔧 Other Observations
+- [Performance optimization opportunities]
+- [Test coverage recommendations]
+- [Architecture or design considerations]
 
 ## 📋 Alternative Solutions
 - [Solutions not adopted in conflict adjudication]
@@ -259,13 +249,12 @@ Better: "Suggest confirming..., to avoid potential..."
 ### Inline Comment Standards
 - Professional and neutral tone, avoid emotionalism
 - Use "suggest/may/please confirm" wording for uncertain items
-- Get to the point, prioritize providing suggestion code blocks for minor fixes
-- Describe multi-line modifications with clear pseudocode
+- Get to the point, provide clear and concise feedback
 - When multiple issues in same code block, organize with list:
   ```
   This code block has the following issues:
-  - Issue 1: Description + suggestion
-  - Issue 2: Description + suggestion
+  - Issue 1: Description
+  - Issue 2: Description
   ```
 
 ### Summary Standards
