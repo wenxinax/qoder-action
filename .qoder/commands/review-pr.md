@@ -49,7 +49,7 @@ Example: `REPO:qoder/action PR_NUMBER:123 OUTPUT_LANGUAGE:English`
    - When sub-agents have overlaps or conflicts, reconcile based on actual reading results and integrate into readable feedback
 5. **Deliver Review**
    - Must call `mcp__qoder_github__create_pending_pull_request_review`
-   - **Post Inline Comments**: For clear bugs with locatable code blocks, call `mcp__qoder_github__add_comment_to_pending_review`. Write only one comment per code block; body can list multiple issues with numbering; multi-line issues need `startLine`/`line` (must be within the same diff chunk). Keep content concise and clear. If API call fails, don't retry—move to summary with file/line noted
+   - **Post Inline Comments**: For clear bugs with locatable code blocks, call `mcp__qoder_github__add_comment_to_pending_review`. Write only one comment per code block; body can list multiple issues with numbering; multi-line issues need `start_line`/`line` (must be within the same diff chunk). Keep content concise and clear. If API call fails, don't retry—move to summary with file/line noted
    - **Write Summary**: Consolidate code issues and provide global observations
    - Must call `mcp__qoder_github__submit_pending_pull_request_review` to submit; troubleshoot and retry on failure, record "Review Submitted" in TodoWrite upon success
    - Summary template (group by logical block, keep concise):
