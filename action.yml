@@ -162,8 +162,9 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
-        GITHUB_OWNER: ${{ github.repository_owner }}
-        GITHUB_REPO: ${{ github.event.repository.name }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
       run: |
         QODER_GITHUB_MCP_VERSION="beta"
         
@@ -182,8 +183,9 @@ runs:
               "args": ["stdio"],
               "env": {
                 "GITHUB_TOKEN": "${GITHUB_TOKEN}",
-                "GITHUB_OWNER": "${GITHUB_OWNER}",
-                "GITHUB_REPO": "${GITHUB_REPO}"
+                "GITHUB_REPOSITORY": "${GITHUB_REPOSITORY}",
+                "GITHUB_RUN_ID": "${GITHUB_RUN_ID}",
+                "GITHUB_SERVER_URL": "${GITHUB_SERVER_URL}"
               },
               "type": "stdio"
             }
