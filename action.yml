@@ -92,32 +92,21 @@ runs:
         TOKEN_RESPONSE=$(cat /tmp/token_response.json)
         
         if [ "${HTTP_CODE}" -ne 200 ]; then
-          ERROR_CODE=$(echo "${TOKEN_RESPONSE}" | jq -r '.errorCode // "Unknown"')
+          ERROR_MESSAGE=$(echo "${TOKEN_RESPONSE}" | jq -r '.errorMessage // "Unknown"')
           REQUEST_ID=$(echo "${TOKEN_RESPONSE}" | jq -r '.requestId // "N/A"')
           
           echo "::error::GitHub App Token Exchange Failed (Request ID: ${REQUEST_ID})"
           echo "::error::"
           
-          case "${ERROR_CODE}" in
-            "Unauthorized")
-              echo "::error::❌ Solution: Your Qoder Personal Access Token is invalid or expired."
-              echo "::error::Please check:"
-              echo "::error::  1. Visit https://qoder.com/settings/tokens to verify your token"
-              echo "::error::  2. Make sure the token is correctly set in your repository secrets as 'QODER_PERSONAL_ACCESS_TOKEN'"
-              echo "::error::  3. If the token has expired, generate a new one and update the secret"
-              ;;
-            "NotFound"|"Forbidden")
-              echo "::error::❌ Solution: GitHub authorization is not properly configured."
-              echo "::error::Please complete the following steps:"
-              echo "::error::  1. Visit https://qoder.com/integrations"
-              echo "::error::  2. Connect your GitHub account if not already connected"
-              echo "::error::  3. Configure GitHub authorization and install Qoder GitHub App to this repository"
-              ;;
-            *)
-              echo "::error::❌ An unexpected error occurred."
-              echo "::error::Please contact Qoder support with the Request ID: ${REQUEST_ID}"
-              ;;
-          esac
+          if echo "${ERROR_MESSAGE}" | grep -qi "invalid personal access token"; then
+            echo "::error::Your Qoder Personal Access Token is invalid or expired. Please update the secret and try again."
+          elif echo "${ERROR_MESSAGE}" | grep -qi "no authorized record\|GitHub App is not installed"; then
+            echo "::error::The Qoder GitHub App is not configured correctly. Please run /setup-github locally to complete the configuration."
+          elif echo "${ERROR_MESSAGE}" | grep -qi "invalid OIDC token"; then
+            echo "::error::OIDC authentication failed. Please re-run the job."
+          else
+            echo "::error::Please contact Qoder support with the Request ID: ${REQUEST_ID}"
+          fi
           
           exit 1
         fi
