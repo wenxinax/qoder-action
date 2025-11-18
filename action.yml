@@ -169,7 +169,7 @@ runs:
         QODER_GITHUB_MCP_VERSION="beta"
         
         echo "Downloading qoder-github MCP server..."
-        curl -fsSL "https://download.qoder.com/qodercli/mcp/releases/${QODER_GITHUB_MCP_VERSION}/qoder-github-mcp-server" -o /tmp/qoder-github-mcp-server
+        curl -fsSL "https://download.qoder.com/qodercli/mcp/qoder-github-mcp-server/releases/${QODER_GITHUB_MCP_VERSION}/qoder-github-mcp-server" -o /tmp/qoder-github-mcp-server
         chmod +x /tmp/qoder-github-mcp-server
         sudo mv /tmp/qoder-github-mcp-server /usr/local/bin/qoder-github-mcp-server
         echo "✓ qoder-github MCP server installed"
