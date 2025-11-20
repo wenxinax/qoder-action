@@ -133,7 +133,7 @@ runs:
         GITHUB_RUN_ID: ${{ github.run_id }}
         GITHUB_SERVER_URL: ${{ github.server_url }}
       run: |
-        QODER_GITHUB_MCP_VERSION="beta"
+        QODER_GITHUB_MCP_VERSION="dev"
         
         echo "Downloading qoder-github MCP server..."
         curl -fsSL "https://download.qoder.com/qodercli/mcp/qoder-github-mcp-server/releases/${QODER_GITHUB_MCP_VERSION}/qoder-github-mcp-server" -o /tmp/qoder-github-mcp-server
