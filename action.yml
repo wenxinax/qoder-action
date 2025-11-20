@@ -27,6 +27,11 @@ inputs:
     description: 'Enable qoder-github MCP Server for enhanced GitHub operations'
     required: false
     default: 'true'
+  
+  qodercli_version:
+    description: 'Version of qodercli to install'
+    required: false
+    default: '0.1.10'
 
 outputs:
   output_file:
@@ -42,9 +47,11 @@ runs:
   steps:
     - name: Install qodercli
       shell: bash
+      env:
+        QODERCLI_VERSION: ${{ inputs.qodercli_version }}
       run: |
-        echo "Installing qodercli via npm..."
-        npm install -g @qoder-ai/qodercli@0.1.10
+        echo "Installing qodercli version ${QODERCLI_VERSION} via npm..."
+        npm install -g @qoder-ai/qodercli@${QODERCLI_VERSION}
         echo "✓ qodercli installed successfully"
         qodercli --version
 
@@ -60,9 +67,6 @@ runs:
         echo "Requesting OIDC token..."
         if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" ]; then
           echo "::error::OIDC token request failed. Please ensure your workflow has 'permissions: id-token: write'"
-          echo "::error::Add the following to your workflow job:"
-          echo "::error::  permissions:"
-          echo "::error::    id-token: write"
           exit 1
         fi
         
@@ -73,14 +77,8 @@ runs:
           echo "::error::Failed to extract OIDC token from response"
           exit 1
         fi
-        
-        echo "✓ OIDC token retrieved (length: ${#OIDC_TOKEN})"
-        
-        # Exchange OIDC token for GitHub App installation token
-        EXCHANGE_URL="https://qoder.com/api/github/github-app-token-exchange"
-        
-        CURL_CMD="curl -X POST -w '%{http_code}' -s -o /tmp/token_response.json -H 'Authorization: Bearer ${OIDC_TOKEN}' -H 'X-Qoder-Personal-Access-Token: ${QODER_PERSONAL_ACCESS_TOKEN}' '${EXCHANGE_URL}'"
-        
+                
+        EXCHANGE_URL="https://qoder.com/api/github/github-app-token-exchange"        
         HTTP_CODE=$(curl -X POST -w "%{http_code}" -s -o /tmp/token_response.json \
           -H "Authorization: Bearer ${OIDC_TOKEN}" \
           -H "X-Qoder-Personal-Access-Token: ${QODER_PERSONAL_ACCESS_TOKEN}" \
@@ -91,9 +89,6 @@ runs:
         if [ "${HTTP_CODE}" -ne 200 ]; then
           ERROR_MESSAGE=$(echo "${TOKEN_RESPONSE}" | jq -r '.errorMessage // "Unknown"')
           REQUEST_ID=$(echo "${TOKEN_RESPONSE}" | jq -r '.requestId // "N/A"')
-          
-          echo "::error::GitHub App Token Exchange Failed (Request ID: ${REQUEST_ID})"
-          echo "::error::"
           
           if echo "${ERROR_MESSAGE}" | grep -qi "invalid personal access token"; then
             echo "::error::Your Qoder Personal Access Token is invalid or expired. Please update the secret and try again."
@@ -109,19 +104,8 @@ runs:
         fi
         
         INSTALLATION_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.token // empty')
-        TOKEN_EXPIRES_AT=$(echo "${TOKEN_RESPONSE}" | jq -r '.expires_at // "N/A"')
-        
-        if [ -z "${INSTALLATION_TOKEN}" ] || [ "${INSTALLATION_TOKEN}" = "null" ]; then
-          echo "::error::Failed to extract token from successful response"
-          echo "::error::Response: ${TOKEN_RESPONSE}"
-          exit 1
-        fi
         
         echo "github_token=${INSTALLATION_TOKEN}" >> "$GITHUB_OUTPUT"
-        echo "✓ Successfully exchanged OIDC token for GitHub App Token"
-        
-        # Configure Git authentication with App Token
-        echo "Configuring Git authentication with App Token..."
         
         BOT_LOGIN="qoderai[bot]"
         BOT_ID="215938697"
@@ -134,14 +118,11 @@ runs:
         fi
         
         git config user.name "${BOT_LOGIN}"
-        git config user.email "${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}"
-        
+        git config user.email "${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}"  
         git config --unset-all "http.${GITHUB_SERVER_URL}/.extraheader" 2>/dev/null || true
         
         REMOTE_URL="https://x-access-token:${INSTALLATION_TOKEN}@${SERVER_HOST}/${GITHUB_REPOSITORY}.git"
         git remote set-url origin "${REMOTE_URL}"
-        echo "✓ Git authentication configured successfully"
-        echo "✓ Using GitHub App Token (qoderai[bot])"
 
     - name: Setup qoder-github MCP Server
       if: inputs.enable_qoder_github_mcp == 'true'
