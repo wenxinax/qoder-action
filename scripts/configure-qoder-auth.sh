@@ -14,6 +14,7 @@ require_env QODER_PERSONAL_ACCESS_TOKEN
 require_env GITHUB_SERVER_URL
 require_env GITHUB_REPOSITORY
 
+echo "::group::Configuring authentication"
 echo "Requesting OIDC token..."
 if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
   echo "::error::OIDC token request failed. Please ensure workflow has 'permissions: id-token: write'" >&2
@@ -82,5 +83,6 @@ git config --unset-all "http.${GITHUB_SERVER_URL}/.extraheader" 2>/dev/null || t
 
 REMOTE_URL="https://x-access-token:${GITHUB_TOKEN}@${SERVER_HOST}/${GITHUB_REPOSITORY}.git"
 git remote set-url origin "${REMOTE_URL}"
+echo "::endgroup::"
 echo "✓ Git credentials configured"
 

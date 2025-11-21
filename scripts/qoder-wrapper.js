@@ -26,7 +26,7 @@ function printGroupEnd() {
   if (isCI) {
     process.stdout.write(`::endgroup::\n`);
   } else {
-    process.stdout.write(`${COLORS.DIM}-----------------------${COLORS.RESET}\n\n`);
+    process.stdout.write(`${COLORS.DIM}-----------------------${COLORS.RESET}\n`);
   }
 }
 
@@ -108,8 +108,6 @@ printGroupEnd();
 
 // --- 2. Execution & Stream Processing ---
 
-console.log('Executing qodercli...');
-
 const child = spawn('qodercli', args, {
   stdio: ['inherit', 'pipe', 'pipe'], // Capture stdout and stderr
   shell: false,
@@ -124,6 +122,7 @@ const rlOut = readline.createInterface({
 
 let lastThinking = '';
 const processedToolIds = new Set();
+let sessionIdPrinted = false;
 
 rlOut.on('line', (line) => {
   // Write raw line to output file
@@ -134,9 +133,10 @@ rlOut.on('line', (line) => {
   try {
     const data = JSON.parse(line);
     
-    // Session ID
-    if (data.type === 'system' && data.subtype === 'init' && data.session_id) {
+    // Session ID (Only print the first one)
+    if (data.type === 'system' && data.subtype === 'init' && data.session_id && !sessionIdPrinted) {
       process.stdout.write(`${COLORS.BOLD}Session ID:${COLORS.RESET} ${data.session_id}\n\n`);
+      sessionIdPrinted = true;
     }
     
     // Stream Content

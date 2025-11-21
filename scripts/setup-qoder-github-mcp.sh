@@ -58,7 +58,7 @@ echo "✓ qoder-github MCP server installed via installer script"
 
 # Use the command name directly since BIN_DIR is in PATH
 MCP_COMMAND="qoder-github-mcp-server"
-echo "MCP command: ${MCP_COMMAND}"
+# echo "MCP command: ${MCP_COMMAND}" # Hidden to reduce log noise
 
 CONFIG_FILE="${HOME}/.qoder.json"
 if [[ ! -f "${CONFIG_FILE}" ]]; then

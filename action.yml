@@ -60,7 +60,7 @@ runs:
         npm install -g @qoder-ai/qodercli@${QODERCLI_VERSION}
         echo "::endgroup::"
         echo "✓ qodercli installed successfully"
-        qodercli --version
+        echo "Installed version: $(qodercli --version)"
 
     - name: Configure Git Authentication
       id: auth
