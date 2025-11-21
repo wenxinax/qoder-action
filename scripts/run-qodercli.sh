@@ -88,7 +88,7 @@ if ! printf '%s\n' "${ARGS[@]}" | grep -qE '(^|[[:space:]])(-f|--output-format)(
   ARGS+=("-f" "stream-json")
 fi
 
-echo "::group::Executing qodercli..."
+echo "::group::Arguments"
 # Print arguments but hide the prompt content for cleaner logs
 echo "Arguments:"
 for ((i=0; i<${#ARGS[@]}; i++)); do
@@ -101,6 +101,7 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
     echo "  $arg"
   fi
 done
+echo "::endgroup::"
 echo ""
 
 set +e
@@ -109,7 +110,6 @@ set +e
 node "${GITHUB_ACTION_PATH}/scripts/qoder-wrapper.js" "${OUTPUT_FILE}" qodercli "${ARGS[@]}" 2> >(tee "${ERROR_FILE}" >&2)
 EXIT_CODE=$?
 set -e
-echo "::endgroup::"
 
 echo "output_file=${OUTPUT_FILE}" >> "${GITHUB_OUTPUT}"
 if [[ -s "${ERROR_FILE}" ]]; then
