@@ -88,8 +88,9 @@ if ! printf '%s\n' "${ARGS[@]}" | grep -qE '(^|[[:space:]])(-f|--output-format)(
   ARGS+=("-f" "stream-json")
 fi
 
-echo "Executing qodercli..."
+echo "::group::Executing qodercli..."
 # Print arguments but hide the prompt content for cleaner logs
+echo "Arguments:"
 for ((i=0; i<${#ARGS[@]}; i++)); do
   arg="${ARGS[$i]}"
   if [[ "$arg" == "-p" || "$arg" == "--prompt" ]]; then
@@ -101,12 +102,12 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
   fi
 done
 echo ""
-echo "::group::Executing qodercli"
+
 set +e
-# Pipe qodercli stdout to the node stream filter
-# Redirect stderr to ERROR_FILE and duplicate to stderr
-qodercli "${ARGS[@]}" 2> >(tee "${ERROR_FILE}" >&2) | node "${GITHUB_ACTION_PATH}/scripts/stream-filter.js" "${OUTPUT_FILE}"
-EXIT_CODE=${PIPESTATUS[0]}
+# Run qodercli via the Node.js wrapper to handle streaming output and filtering
+# Redirect stderr (from both node and qodercli) to ERROR_FILE and duplicate to stderr
+node "${GITHUB_ACTION_PATH}/scripts/qoder-wrapper.js" "${OUTPUT_FILE}" qodercli "${ARGS[@]}" 2> >(tee "${ERROR_FILE}" >&2)
+EXIT_CODE=$?
 set -e
 echo "::endgroup::"
 
