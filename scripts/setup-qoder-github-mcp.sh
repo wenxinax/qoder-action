@@ -23,8 +23,11 @@ echo "${BIN_DIR}" >> "${GITHUB_PATH}"
 
 INSTALLER_URL="${QODER_GITHUB_MCP_INSTALLER_URL:-https://download.qoder.com/qodercli/mcp/qoder-github-mcp-server/install.sh}"
 TMP_INSTALLER="$(mktemp)"
+TMP_CONFIG="$(mktemp)"
+INSTALL_LOG="$(mktemp)"
+
 cleanup() {
-  rm -f "${TMP_INSTALLER}"
+  rm -f "${TMP_INSTALLER}" "${TMP_CONFIG}" "${INSTALL_LOG}"
 }
 trap cleanup EXIT
 
@@ -34,7 +37,6 @@ curl -fsSL "${INSTALLER_URL}" -o "${TMP_INSTALLER}"
 chmod +x "${TMP_INSTALLER}"
 
 # Run installer quietly, capture output to log file
-INSTALL_LOG="$(mktemp)"
 echo "Running installer..."
 
 set +e
@@ -48,11 +50,10 @@ if [[ $EXIT_CODE -ne 0 ]]; then
   echo "::group::Installation Log"
   cat "${INSTALL_LOG}"
   echo "::endgroup::"
-  rm -f "${INSTALL_LOG}"
+  # trap will handle cleanup
   exit $EXIT_CODE
 fi
 
-rm -f "${INSTALL_LOG}"
 echo "::endgroup::"
 echo "✓ qoder-github MCP server installed via installer script"
 
@@ -66,7 +67,6 @@ if [[ ! -f "${CONFIG_FILE}" ]]; then
 fi
 
 # Use jq to merge configuration instead of overwriting
-TMP_CONFIG="$(mktemp)"
 if jq --arg cmd "${MCP_COMMAND}" \
    --arg token "${GITHUB_TOKEN}" \
    --arg repo "${GITHUB_REPOSITORY}" \
@@ -89,4 +89,3 @@ else
    echo "::error::Failed to update MCP configuration using jq"
    exit 1
 fi
-rm -f "${TMP_CONFIG}"

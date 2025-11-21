@@ -15,7 +15,6 @@ inputs:
     description: |
       Additional CLI arguments to pass to qodercli.
       Multiple lines are supported.
-      Each line should be a valid flag.
     required: false
     default: ''
   

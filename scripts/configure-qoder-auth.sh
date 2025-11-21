@@ -35,8 +35,22 @@ HTTP_CODE="$(curl -X POST -w "%{http_code}" -s -o "${TOKEN_RESPONSE_FILE}" \
   -H "Authorization: Bearer ${OIDC_TOKEN}" \
   -H "X-Qoder-Personal-Access-Token: ${QODER_PERSONAL_ACCESS_TOKEN}" \
   "${EXCHANGE_URL}")"
+
+# Check if response is empty or not valid
+if [[ ! -s "${TOKEN_RESPONSE_FILE}" ]]; then
+    echo "::error::Empty response from token exchange endpoint" >&2
+    rm -f "${TOKEN_RESPONSE_FILE}"
+    exit 1
+fi
+
 TOKEN_RESPONSE="$(cat "${TOKEN_RESPONSE_FILE}")"
 rm -f "${TOKEN_RESPONSE_FILE}"
+
+# Verify JSON validity before parsing
+if ! echo "${TOKEN_RESPONSE}" | jq empty >/dev/null 2>&1; then
+  echo "::error::Invalid JSON response from token exchange endpoint (HTTP ${HTTP_CODE}): ${TOKEN_RESPONSE}" >&2
+  exit 1
+fi
 
 if [[ "${HTTP_CODE}" -ne 200 ]]; then
   ERROR_MESSAGE="$(echo "${TOKEN_RESPONSE}" | jq -r '.errorMessage // "Unknown"')"

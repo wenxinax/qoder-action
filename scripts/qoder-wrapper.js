@@ -66,22 +66,18 @@ if (flagsInput) {
   }
 }
 
-// Ensure output format is stream-json
-if (!args.includes('-f') && !args.includes('--output-format')) {
-  args.push('-f', 'stream-json');
+// Force output format to be stream-json, overriding user input if necessary
+const formatIndex = args.findIndex(arg => arg === '-f' || arg === '--output-format');
+if (formatIndex !== -1) {
+  // Remove existing format flag and its value
+  args.splice(formatIndex, 2);
 }
+args.push('-f', 'stream-json');
 
 // Print Arguments Group
-printGroupStart('qodercli arguments');
+printGroupStart('Arguments for qodercli');
 for (let i = 0; i < args.length; i++) {
-  const arg = args[i];
-  if (arg === '-p' || arg === '--prompt') {
-    console.log(`  ${arg}`);
-    console.log(`  (content hidden)`);
-    i++; // Skip next arg (the prompt content)
-  } else {
-    console.log(`  ${arg}`);
-  }
+  console.log(`  ${args[i]}`);
 }
 printGroupEnd();
 
@@ -91,7 +87,7 @@ printGroupEnd();
 const child = spawn('qodercli', args, {
   stdio: ['inherit', 'pipe', 'pipe'], // Capture stdout and stderr
   shell: false,
-  env: process.env // Pass through environment variables
+  env: process.env
 });
 
 // Handle stdout (Main output stream)
@@ -105,7 +101,6 @@ const processedToolIds = new Set();
 let sessionIdPrinted = false;
 
 rlOut.on('line', (line) => {
-  // Write raw line to output file
   outputStream.write(line + '\n');
 
   if (!line.trim()) return;
@@ -113,7 +108,6 @@ rlOut.on('line', (line) => {
   try {
     const data = JSON.parse(line);
     
-    // Session ID (Only print the first one)
     if (data.type === 'system' && data.subtype === 'init' && data.session_id && !sessionIdPrinted) {
       process.stdout.write(`${COLORS.BOLD}Session ID:${COLORS.RESET} ${data.session_id}\n`);
       sessionIdPrinted = true;
