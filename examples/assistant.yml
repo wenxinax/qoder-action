@@ -27,7 +27,6 @@ jobs:
       - name: Build Arguments
         id: build_args
         run: |
-          # 构建基础参数
           ARGS="REPO: ${{ github.repository }}
           REQUEST_SOURCE: ${{ github.event_name }}
           THREAD_ID: ${{ github.event.comment.node_id }}
@@ -38,7 +37,6 @@ jobs:
           IS_PR: ${{ github.event.issue.pull_request != null || github.event_name == 'pull_request_review_comment' }}
           ISSUE_OR_PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}"
           
-          # 条件性添加可选参数
           if [ -n "${{ github.event.comment.pull_request_review_id }}" ]; then
             ARGS="$ARGS
           REVIEW_ID: ${{ github.event.comment.pull_request_review_id }}"
@@ -54,7 +52,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Run Qoder Assistant
-        uses: wenxinax/qoder-action@main
+        uses: wenxinax/qoder-action@v0
         with:
           qoder_personal_access_token: ${{ secrets.QODER_PERSONAL_ACCESS_TOKEN }}
           prompt: |
