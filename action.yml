@@ -50,10 +50,11 @@ runs:
       env:
         QODERCLI_VERSION: ${{ inputs.qodercli_version }}
       run: |
-        echo "Installing qodercli version ${QODERCLI_VERSION} via npm..."
-        npm install -g @qoder-ai/qodercli@${QODERCLI_VERSION}
-        echo "✓ qodercli installed successfully"
-        qodercli --version
+        # todo 上线前改成 yum install
+        echo "Downloading qodercli binary..."
+        curl -fsSL https://qcli-aone.oss-cn-hangzhou.aliyuncs.com/github/qodercli -o /tmp/qodercli
+        chmod +x /tmp/qodercli
+        sudo mv /tmp/qodercli /usr/local/bin/qodercli
 
     - name: Configure Git Authentication
       id: auth
