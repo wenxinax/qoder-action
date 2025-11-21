@@ -11,23 +11,13 @@ const COLORS = {
   BOLD: '\x1b[1m'
 };
 
-const isCI = process.env.GITHUB_ACTIONS === 'true';
-
-// Helper functions for CI logging
+// Helper functions for GitHub Actions logging
 function printGroupStart(title) {
-  if (isCI) {
-    process.stdout.write(`::group::${title}\n`);
-  } else {
-    process.stdout.write(`\n${COLORS.DIM}--- ${title} ---${COLORS.RESET}\n`);
-  }
+  process.stdout.write(`::group::${title}\n`);
 }
 
 function printGroupEnd() {
-  if (isCI) {
-    process.stdout.write(`::endgroup::\n`);
-  } else {
-    process.stdout.write(`${COLORS.DIM}-----------------------${COLORS.RESET}\n`);
-  }
+  process.stdout.write(`::endgroup::\n`);
 }
 
 // --- 1. Environment & Arguments Preparation ---
@@ -83,16 +73,6 @@ if (!args.includes('-f') && !args.includes('--output-format')) {
 
 // Print Arguments Group
 printGroupStart('qodercli arguments');
-args.forEach((arg, index) => {
-  if (arg === '-p' || arg === '--prompt') {
-    console.log(`  ${arg}`);
-    console.log(`  (content hidden)`);
-    // Note: In the loop below we can't skip next easily without manual index handling,
-    // but for display purposes, this is tricky if we just iterate.
-    // Let's iterate manually for logging to hide prompt value.
-  } 
-});
-// Re-logging with proper loop for hiding prompt values
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
   if (arg === '-p' || arg === '--prompt') {
@@ -135,7 +115,7 @@ rlOut.on('line', (line) => {
     
     // Session ID (Only print the first one)
     if (data.type === 'system' && data.subtype === 'init' && data.session_id && !sessionIdPrinted) {
-      process.stdout.write(`${COLORS.BOLD}Session ID:${COLORS.RESET} ${data.session_id}\n\n`);
+      process.stdout.write(`${COLORS.BOLD}Session ID:${COLORS.RESET} ${data.session_id}\n`);
       sessionIdPrinted = true;
     }
     
@@ -145,7 +125,9 @@ rlOut.on('line', (line) => {
         data.message.content.forEach(part => {
           // Text
           if (part.type === 'text' && part.text) {
-            process.stdout.write(part.text);
+            printGroupStart(`${COLORS.CYAN}Assistant${COLORS.RESET}`);
+            process.stdout.write(part.text + '\n');
+            printGroupEnd();
           }
           // Thinking
           else if (part.thinking) {
