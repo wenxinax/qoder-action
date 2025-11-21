@@ -55,8 +55,10 @@ runs:
       env:
         QODERCLI_VERSION: ${{ inputs.qodercli_version }}
       run: |
+        echo "::group::Installing qodercli"
         echo "Installing qodercli version ${QODERCLI_VERSION} via npm..."
         npm install -g @qoder-ai/qodercli@${QODERCLI_VERSION}
+        echo "::endgroup::"
         echo "✓ qodercli installed successfully"
         qodercli --version
 
