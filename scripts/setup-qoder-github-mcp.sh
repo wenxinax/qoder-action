@@ -33,8 +33,26 @@ echo "Downloading qoder-github MCP installer script from ${INSTALLER_URL}..."
 curl -fsSL "${INSTALLER_URL}" -o "${TMP_INSTALLER}"
 chmod +x "${TMP_INSTALLER}"
 
-# Run installer and display the output
-"${TMP_INSTALLER}" --version "${QODER_GITHUB_MCP_VERSION}" --install-dir "${BIN_DIR}"
+# Run installer quietly, capture output to log file
+INSTALL_LOG="$(mktemp)"
+echo "Running installer..."
+
+set +e
+"${TMP_INSTALLER}" --version "${QODER_GITHUB_MCP_VERSION}" --install-dir "${BIN_DIR}" > "${INSTALL_LOG}" 2>&1
+EXIT_CODE=$?
+set -e
+
+if [[ $EXIT_CODE -ne 0 ]]; then
+  echo "::endgroup::"
+  echo "::error::qoder-github MCP server installation failed"
+  echo "::group::Installation Log"
+  cat "${INSTALL_LOG}"
+  echo "::endgroup::"
+  rm -f "${INSTALL_LOG}"
+  exit $EXIT_CODE
+fi
+
+rm -f "${INSTALL_LOG}"
 echo "::endgroup::"
 echo "✓ qoder-github MCP server installed via installer script"
 

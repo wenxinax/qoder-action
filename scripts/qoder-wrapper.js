@@ -44,10 +44,16 @@ rl.on('line', (line) => {
     if (data.type === 'assistant' && data.subtype === 'stream') {
       if (data.message && Array.isArray(data.message.content)) {
         data.message.content.forEach(part => {
+          // Handle standard text content
           if (part.type === 'text' && part.text) {
             process.stdout.write(part.text);
           }
+          // Handle thinking content
+          else if (part.thinking) {
+            process.stdout.write('[Thinking] ' + part.thinking + '\n');
+          }
         });
+        // Add a newline at the end of each JSON chunk to keep logs readable
         process.stdout.write('\n');
       }
     }
