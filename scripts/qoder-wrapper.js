@@ -1,32 +1,9 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 const readline = require('readline');
+const path = require('path');
 
-// Usage: node stream-filter.js <output_file> <command> [args...]
-const outputFile = process.argv[2];
-const command = process.argv[3];
-const args = process.argv.slice(4);
-
-if (!outputFile || !command) {
-  console.error('Usage: node stream-filter.js <output_file> <command> [args...]');
-  process.exit(1);
-}
-
-const outputStream = fs.createWriteStream(outputFile, { flags: 'a' });
-
-// Spawn the child process
-const child = spawn(command, args, {
-  stdio: ['inherit', 'pipe', 'inherit'], // stdin: inherit, stdout: pipe, stderr: inherit
-  shell: false
-});
-
-// Handle stdout line by line
-const rl = readline.createInterface({
-  input: child.stdout,
-  terminal: false
-});
-
-// ANSI colors for better log formatting
+// ANSI colors
 const COLORS = {
   CYAN: '\x1b[36m',
   DIM: '\x1b[2m',
@@ -34,8 +11,122 @@ const COLORS = {
   BOLD: '\x1b[1m'
 };
 
-rl.on('line', (line) => {
-  // 1. Always write raw line to output file for machine consumption
+const isCI = process.env.GITHUB_ACTIONS === 'true';
+
+// Helper functions for CI logging
+function printGroupStart(title) {
+  if (isCI) {
+    process.stdout.write(`::group::${title}\n`);
+  } else {
+    process.stdout.write(`\n${COLORS.DIM}--- ${title} ---${COLORS.RESET}\n`);
+  }
+}
+
+function printGroupEnd() {
+  if (isCI) {
+    process.stdout.write(`::endgroup::\n`);
+  } else {
+    process.stdout.write(`${COLORS.DIM}-----------------------${COLORS.RESET}\n\n`);
+  }
+}
+
+// --- 1. Environment & Arguments Preparation ---
+
+const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
+const prompt = process.env.INPUT_PROMPT || '';
+const flagsInput = process.env.INPUT_FLAGS || '';
+const githubOutput = process.env.GITHUB_OUTPUT;
+
+// Generate unique file paths
+const timestamp = Math.floor(Date.now() / 1000);
+const outputFile = `/tmp/qoder-output-${timestamp}.log`;
+const errorFile = `/tmp/qoder-error-${timestamp}.log`;
+
+const outputStream = fs.createWriteStream(outputFile, { flags: 'a' });
+const errorStream = fs.createWriteStream(errorFile, { flags: 'a' });
+
+// Parse flags using regex logic (migrated from shell script)
+const args = ['-w', workspace];
+
+// Add prompt if exists
+if (prompt) {
+  args.push('-p', prompt);
+}
+
+// Parse additional flags
+if (flagsInput) {
+  const lines = flagsInput.split('\n');
+  // Match non-whitespace OR double-quoted content OR single-quoted content
+  const regex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    
+    let match;
+    while ((match = regex.exec(line)) !== null) {
+      if (match[1] !== undefined) {
+        args.push(match[1]);
+      } else if (match[2] !== undefined) {
+        args.push(match[2]);
+      } else {
+        args.push(match[0]);
+      }
+    }
+  }
+}
+
+// Ensure output format is stream-json
+if (!args.includes('-f') && !args.includes('--output-format')) {
+  args.push('-f', 'stream-json');
+}
+
+// Print Arguments Group
+printGroupStart('qodercli arguments');
+args.forEach((arg, index) => {
+  if (arg === '-p' || arg === '--prompt') {
+    console.log(`  ${arg}`);
+    console.log(`  (content hidden)`);
+    // Note: In the loop below we can't skip next easily without manual index handling,
+    // but for display purposes, this is tricky if we just iterate.
+    // Let's iterate manually for logging to hide prompt value.
+  } 
+});
+// Re-logging with proper loop for hiding prompt values
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if (arg === '-p' || arg === '--prompt') {
+    console.log(`  ${arg}`);
+    console.log(`  (content hidden)`);
+    i++; // Skip next arg (the prompt content)
+  } else {
+    console.log(`  ${arg}`);
+  }
+}
+printGroupEnd();
+
+
+// --- 2. Execution & Stream Processing ---
+
+console.log('Executing qodercli...');
+
+const child = spawn('qodercli', args, {
+  stdio: ['inherit', 'pipe', 'pipe'], // Capture stdout and stderr
+  shell: false,
+  env: process.env // Pass through environment variables
+});
+
+// Handle stdout (Main output stream)
+const rlOut = readline.createInterface({
+  input: child.stdout,
+  terminal: false
+});
+
+let lastThinking = '';
+const processedToolIds = new Set();
+
+rlOut.on('line', (line) => {
+  // Write raw line to output file
   outputStream.write(line + '\n');
 
   if (!line.trim()) return;
@@ -43,47 +134,93 @@ rl.on('line', (line) => {
   try {
     const data = JSON.parse(line);
     
-    // 2. Capture and print Session ID from the init message
+    // Session ID
     if (data.type === 'system' && data.subtype === 'init' && data.session_id) {
       process.stdout.write(`${COLORS.BOLD}Session ID:${COLORS.RESET} ${data.session_id}\n\n`);
     }
     
-    // 3. Filter for human-readable logs: Only print Assistant's text content
+    // Stream Content
     if (data.type === 'assistant' && data.subtype === 'stream') {
       if (data.message && Array.isArray(data.message.content)) {
         data.message.content.forEach(part => {
-          // Handle standard text content
+          // Text
           if (part.type === 'text' && part.text) {
             process.stdout.write(part.text);
           }
-          // Handle thinking content
+          // Thinking
           else if (part.thinking) {
-            // Create a summary for the group title, removing newlines
+            if (part.thinking === lastThinking) return;
+            lastThinking = part.thinking;
             const summary = part.thinking.substring(0, 60).replace(/\r?\n/g, ' ') + (part.thinking.length > 60 ? '...' : '');
-            
-            // Use GitHub Actions group for collapsible thinking blocks
-            process.stdout.write(`::group::${COLORS.CYAN}[Thinking]${COLORS.RESET} ${summary}\n`);
+            printGroupStart(`${COLORS.CYAN}[Thinking]${COLORS.RESET} ${summary}`);
             process.stdout.write(part.thinking + '\n');
-            process.stdout.write(`::endgroup::\n`);
+            printGroupEnd();
+          }
+          // Tool Calls
+          else if (part.type === 'function' && part.id && part.name) {
+            if (processedToolIds.has(part.id)) return;
+            processedToolIds.add(part.id);
+
+            let inputStr = part.input;
+            try {
+                const inputObj = JSON.parse(part.input);
+                inputStr = JSON.stringify(inputObj, null, 2);
+            } catch (e) {}
+
+            const argsSummary = inputStr.replace(/\s+/g, ' ').substring(0, 50) + (inputStr.length > 50 ? '...' : '');
+            printGroupStart(`${COLORS.CYAN}[Tool Call]${COLORS.RESET} ${part.name} ${argsSummary}`);
+            process.stdout.write(inputStr + '\n');
+            printGroupEnd();
           }
         });
-        // Add a newline at the end of each JSON chunk to keep logs readable
-        // process.stdout.write('\n'); // Removed to avoid too many newlines with the formatted blocks
       }
     }
 
   } catch (e) {
-    // If it's not JSON, print it as is
     console.log(line);
   }
 });
 
+// Handle stderr (Error logging)
+child.stderr.on('data', (chunk) => {
+  errorStream.write(chunk);
+  process.stderr.write(chunk); // Also print to console stderr
+});
+
+// --- 3. Cleanup & Output ---
+
 child.on('close', (code) => {
   outputStream.end();
-  process.exit(code);
+  errorStream.end(() => {
+    // After streams close, write to GITHUB_OUTPUT
+    if (githubOutput) {
+        try {
+            fs.appendFileSync(githubOutput, `output_file=${outputFile}\n`);
+            
+            // Check if error file has content
+            const errorStats = fs.statSync(errorFile);
+            if (errorStats.size > 0) {
+                const errorContent = fs.readFileSync(errorFile, 'utf8');
+                fs.appendFileSync(githubOutput, `error<<QODER_ERROR_EOF\n${errorContent}\nQODER_ERROR_EOF\n`);
+            } else {
+                fs.appendFileSync(githubOutput, `error=\n`);
+            }
+        } catch (err) {
+            console.error('Failed to write to GITHUB_OUTPUT:', err);
+        }
+    }
+    
+    if (code !== 0) {
+        console.log(`::error::qodercli failed with exit code ${code}`);
+    } else {
+        console.log('✓ qodercli executed successfully');
+    }
+
+    process.exit(code);
+  });
 });
 
 child.on('error', (err) => {
-  console.error(`Failed to start subprocess: ${err}`);
+  console.error(`Failed to start qodercli: ${err}`);
   process.exit(1);
 });

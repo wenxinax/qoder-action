@@ -39,98 +39,11 @@ setup_qoder_environment() {
 
 setup_qoder_environment
 
-OUTPUT_FILE="/tmp/qoder-output-$(date +%s).log"
-ERROR_FILE="/tmp/qoder-error-$(date +%s).log"
-
-ARGS=("-w" "${GITHUB_WORKSPACE}")
-
-if [[ -n "${INPUT_PROMPT:-}" ]]; then
-  # Handle escape sequences like \n in the prompt string
-  PROCESSED_PROMPT=$(printf '%b' "${INPUT_PROMPT}")
-  ARGS+=("-p" "${PROCESSED_PROMPT}")
+# Delegate execution to the Node.js wrapper
+# The wrapper handles arguments, logging, output streams, and GitHub outputs
+if ! command -v node >/dev/null 2>&1; then
+  echo "::error::node is required to run qoder-wrapper.js" >&2
+  exit 1
 fi
 
-if [[ -n "${INPUT_FLAGS:-}" ]]; then
-  if ! command -v node >/dev/null 2>&1; then
-    echo "::error::node is required to parse multi-token flags." >&2
-    exit 1
-  fi
-
-  while IFS= read -r token; do
-    [[ -n "${token}" ]] && ARGS+=("${token}")
-  done < <(node - <<'JS'
-const input = process.env.INPUT_FLAGS || "";
-const lines = input.split("\n");
-// Match non-whitespace OR double-quoted content OR single-quoted content
-const regex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
-
-for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    
-    let match;
-    while ((match = regex.exec(line)) !== null) {
-        // match[1] is double quoted content, match[2] is single quoted content
-        if (match[1] !== undefined) {
-            console.log(match[1]);
-        } else if (match[2] !== undefined) {
-            console.log(match[2]);
-        } else {
-            console.log(match[0]);
-        }
-    }
-}
-JS
-)
-fi
-
-if ! printf '%s\n' "${ARGS[@]}" | grep -qE '(^|[[:space:]])(-f|--output-format)([[:space:]]|$)'; then
-  ARGS+=("-f" "stream-json")
-fi
-
-echo "::group::Arguments"
-# Print arguments but hide the prompt content for cleaner logs
-echo "Arguments:"
-for ((i=0; i<${#ARGS[@]}; i++)); do
-  arg="${ARGS[$i]}"
-  if [[ "$arg" == "-p" || "$arg" == "--prompt" ]]; then
-    echo "  $arg"
-    echo "  (content hidden)"
-    ((i++)) # Skip printing the actual prompt value
-  else
-    echo "  $arg"
-  fi
-done
-echo "::endgroup::"
-echo ""
-
-set +e
-# Run qodercli via the Node.js wrapper to handle streaming output and filtering
-# Redirect stderr (from both node and qodercli) to ERROR_FILE and duplicate to stderr
-node "${GITHUB_ACTION_PATH}/scripts/qoder-wrapper.js" "${OUTPUT_FILE}" qodercli "${ARGS[@]}" 2> >(tee "${ERROR_FILE}" >&2)
-EXIT_CODE=$?
-set -e
-
-echo "output_file=${OUTPUT_FILE}" >> "${GITHUB_OUTPUT}"
-if [[ -s "${ERROR_FILE}" ]]; then
-  {
-    echo "error<<QODER_ERROR_EOF"
-    cat "${ERROR_FILE}"
-    echo "QODER_ERROR_EOF"
-  } >> "${GITHUB_OUTPUT}"
-else
-  echo "error=" >> "${GITHUB_OUTPUT}"
-fi
-
-if [[ ${EXIT_CODE} -eq 0 ]]; then
-  echo "✓ qodercli executed successfully"
-else
-  echo "::error::qodercli failed with exit code ${EXIT_CODE}"
-  if [[ -s "${ERROR_FILE}" ]]; then
-    while IFS= read -r line; do
-      echo "::error::${line}"
-    done < "${ERROR_FILE}"
-  fi
-  exit "${EXIT_CODE}"
-fi
-
+node "${GITHUB_ACTION_PATH}/scripts/qoder-wrapper.js"
