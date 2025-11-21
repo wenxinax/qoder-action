@@ -40,36 +40,33 @@ echo "✓ qoder-github MCP server installed via installer script"
 MCP_COMMAND="qoder-github-mcp-server"
 echo "MCP command: ${MCP_COMMAND}"
 
-cat > "${HOME}/.qoder.json" <<EOF
-{
-  "mcpServers": {
-    "qoder_github": {
-      "command": "${MCP_COMMAND}",
-      "args": ["stdio"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
-        "GITHUB_REPOSITORY": "${GITHUB_REPOSITORY}",
-        "GITHUB_RUN_ID": "${GITHUB_RUN_ID}",
-        "GITHUB_SERVER_URL": "${GITHUB_SERVER_URL}"
-      },
-      "type": "stdio"
-    }
-  }
-}
-EOF
-
-echo "✓ MCP configuration created at \$HOME/.qoder.json"
-echo ""
-echo "Generated .qoder.json content:"
-cat "${HOME}/.qoder.json"
-echo ""
-
-if [[ -f "${HOME}/.qoder/.config.json" ]]; then
-  echo "Content of \$HOME/.qoder/.config.json:"
-  cat "${HOME}/.qoder/.config.json"
-  echo ""
-else
-  echo "Note: \$HOME/.qoder/.config.json does not exist yet"
-  echo ""
+CONFIG_FILE="${HOME}/.qoder.json"
+if [[ ! -f "${CONFIG_FILE}" ]]; then
+  echo "{}" > "${CONFIG_FILE}"
 fi
 
+# Use jq to merge configuration instead of overwriting
+TMP_CONFIG="$(mktemp)"
+if jq --arg cmd "${MCP_COMMAND}" \
+   --arg token "${GITHUB_TOKEN}" \
+   --arg repo "${GITHUB_REPOSITORY}" \
+   --arg runid "${GITHUB_RUN_ID}" \
+   --arg server "${GITHUB_SERVER_URL}" \
+   '.mcpServers.qoder_github = {
+     "command": $cmd,
+     "args": ["stdio"],
+     "env": {
+       "GITHUB_TOKEN": $token,
+       "GITHUB_REPOSITORY": $repo,
+       "GITHUB_RUN_ID": $runid,
+       "GITHUB_SERVER_URL": $server
+     },
+     "type": "stdio"
+   }' "${CONFIG_FILE}" > "${TMP_CONFIG}"; then
+   mv "${TMP_CONFIG}" "${CONFIG_FILE}"
+   echo "✓ MCP configuration updated at ${CONFIG_FILE}"
+else
+   echo "::error::Failed to update MCP configuration using jq"
+   exit 1
+fi
+rm -f "${TMP_CONFIG}"

@@ -49,22 +49,36 @@ if [[ -n "${INPUT_PROMPT:-}" ]]; then
 fi
 
 if [[ -n "${INPUT_FLAGS:-}" ]]; then
-  if ! command -v python3 >/dev/null 2>&1; then
-    echo "::error::python3 is required to parse multi-token flags. Please install python3 or provide single-token lines." >&2
+  if ! command -v node >/dev/null 2>&1; then
+    echo "::error::node is required to parse multi-token flags." >&2
     exit 1
   fi
 
   while IFS= read -r token; do
     [[ -n "${token}" ]] && ARGS+=("${token}")
-  done < <(python3 - <<'PY'
-import os, shlex
-for raw_line in os.environ.get("INPUT_FLAGS", "").splitlines():
-    line = raw_line.strip()
-    if not line:
-        continue
-    for token in shlex.split(line):
-        print(token)
-PY
+  done < <(node - <<'JS'
+const input = process.env.INPUT_FLAGS || "";
+const lines = input.split("\n");
+// Match non-whitespace OR double-quoted content OR single-quoted content
+const regex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
+
+for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    
+    let match;
+    while ((match = regex.exec(line)) !== null) {
+        // match[1] is double quoted content, match[2] is single quoted content
+        if (match[1] !== undefined) {
+            console.log(match[1]);
+        } else if (match[2] !== undefined) {
+            console.log(match[2]);
+        } else {
+            console.log(match[0]);
+        }
+    }
+}
+JS
 )
 fi
 
