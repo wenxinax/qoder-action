@@ -54,4 +54,17 @@ cat > "${HOME}/.qoder.json" <<EOF
 EOF
 
 echo "✓ MCP configuration created at \$HOME/.qoder.json"
+echo ""
+echo "Generated .qoder.json content:"
+cat "${HOME}/.qoder.json"
+echo ""
+
+if [[ -f "${HOME}/.qoder/.config.json" ]]; then
+  echo "Content of \$HOME/.qoder/.config.json:"
+  cat "${HOME}/.qoder/.config.json"
+  echo ""
+else
+  echo "Note: \$HOME/.qoder/.config.json does not exist yet"
+  echo ""
+fi
 

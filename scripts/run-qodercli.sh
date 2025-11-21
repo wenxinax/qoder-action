@@ -43,7 +43,9 @@ ERROR_FILE="/tmp/qoder-error-$(date +%s).log"
 ARGS=("-w" "${GITHUB_WORKSPACE}")
 
 if [[ -n "${INPUT_PROMPT:-}" ]]; then
-  ARGS+=("-p" "${INPUT_PROMPT}")
+  # Handle escape sequences like \n in the prompt string
+  PROCESSED_PROMPT=$(printf '%b' "${INPUT_PROMPT}")
+  ARGS+=("-p" "${PROCESSED_PROMPT}")
 fi
 
 if [[ -n "${INPUT_FLAGS:-}" ]]; then
