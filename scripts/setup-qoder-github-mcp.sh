@@ -32,8 +32,12 @@ echo "Downloading qoder-github MCP installer script from ${INSTALLER_URL}..."
 curl -fsSL "${INSTALLER_URL}" -o "${TMP_INSTALLER}"
 chmod +x "${TMP_INSTALLER}"
 
-MCP_COMMAND="$("${TMP_INSTALLER}" --version "${QODER_GITHUB_MCP_VERSION}" --install-dir "${BIN_DIR}")"
+# Run installer and capture only the last line (the command path)
+INSTALL_OUTPUT=$("${TMP_INSTALLER}" --version "${QODER_GITHUB_MCP_VERSION}" --install-dir "${BIN_DIR}")
+echo "${INSTALL_OUTPUT}"
+MCP_COMMAND=$(echo "${INSTALL_OUTPUT}" | tail -n 1)
 echo "✓ qoder-github MCP server installed via installer script"
+echo "MCP command path: ${MCP_COMMAND}"
 
 cat > "${HOME}/.qoder.json" <<EOF
 {
