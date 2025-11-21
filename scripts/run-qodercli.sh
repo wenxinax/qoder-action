@@ -15,6 +15,7 @@ require_env GITHUB_OUTPUT
 require_env GITHUB_ACTION_PATH
 
 setup_qoder_environment() {
+  echo "::group::Setting up qodercli environment"
   echo "Setting up qodercli environment..."
   mkdir -p "${HOME}/.qoder/commands" "${HOME}/.qoder/subagents"
 
@@ -33,6 +34,7 @@ setup_qoder_environment() {
       fi
     fi
   fi
+  echo "::endgroup::"
 }
 
 setup_qoder_environment
@@ -86,14 +88,27 @@ if ! printf '%s\n' "${ARGS[@]}" | grep -qE '(^|[[:space:]])(-f|--output-format)(
   ARGS+=("-f" "stream-json")
 fi
 
-echo "Executing qodercli with arguments:"
-printf '  %s\n' "${ARGS[@]}"
+echo "Executing qodercli..."
+# Print arguments but hide the prompt content for cleaner logs
+for ((i=0; i<${#ARGS[@]}; i++)); do
+  arg="${ARGS[$i]}"
+  if [[ "$arg" == "-p" || "$arg" == "--prompt" ]]; then
+    echo "  $arg"
+    echo "  (content hidden)"
+    ((i++)) # Skip printing the actual prompt value
+  else
+    echo "  $arg"
+  fi
+done
 echo ""
-
+echo "::group::Executing qodercli"
 set +e
-qodercli "${ARGS[@]}" > >(tee "${OUTPUT_FILE}") 2> >(tee "${ERROR_FILE}" >&2)
-EXIT_CODE=$?
+# Pipe qodercli stdout to the node stream filter
+# Redirect stderr to ERROR_FILE and duplicate to stderr
+qodercli "${ARGS[@]}" 2> >(tee "${ERROR_FILE}" >&2) | node "${GITHUB_ACTION_PATH}/scripts/stream-filter.js" "${OUTPUT_FILE}"
+EXIT_CODE=${PIPESTATUS[0]}
 set -e
+echo "::endgroup::"
 
 echo "output_file=${OUTPUT_FILE}" >> "${GITHUB_OUTPUT}"
 if [[ -s "${ERROR_FILE}" ]]; then

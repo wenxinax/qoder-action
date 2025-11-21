@@ -28,12 +28,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+echo "::group::Installing qoder-github MCP server"
 echo "Downloading qoder-github MCP installer script from ${INSTALLER_URL}..."
 curl -fsSL "${INSTALLER_URL}" -o "${TMP_INSTALLER}"
 chmod +x "${TMP_INSTALLER}"
 
 # Run installer and display the output
 "${TMP_INSTALLER}" --version "${QODER_GITHUB_MCP_VERSION}" --install-dir "${BIN_DIR}"
+echo "::endgroup::"
 echo "✓ qoder-github MCP server installed via installer script"
 
 # Use the command name directly since BIN_DIR is in PATH

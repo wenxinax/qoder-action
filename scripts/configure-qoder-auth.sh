@@ -54,13 +54,17 @@ if [[ "${HTTP_CODE}" -ne 200 ]]; then
   exit 1
 fi
 
-INSTALLATION_TOKEN="$(echo "${TOKEN_RESPONSE}" | jq -r '.token // empty')"
-if [[ -z "${INSTALLATION_TOKEN}" ]]; then
+GITHUB_TOKEN="$(echo "${TOKEN_RESPONSE}" | jq -r '.token // empty')"
+if [[ -n "${GITHUB_TOKEN}" ]]; then
+  echo "::add-mask::${GITHUB_TOKEN}"
+fi
+
+if [[ -z "${GITHUB_TOKEN}" ]]; then
   echo "::error::Failed to read installation token from exchange response" >&2
   exit 1
 fi
 
-echo "github_token=${INSTALLATION_TOKEN}" >> "${GITHUB_OUTPUT}"
+echo "github_token=${GITHUB_TOKEN}" >> "${GITHUB_OUTPUT}"
 
 BOT_LOGIN="qoderai[bot]"
 BOT_ID="215938697"
@@ -76,7 +80,7 @@ git config user.name "${BOT_LOGIN}"
 git config user.email "${BOT_ID}+${BOT_LOGIN}@${NOREPLY_DOMAIN}"
 git config --unset-all "http.${GITHUB_SERVER_URL}/.extraheader" 2>/dev/null || true
 
-REMOTE_URL="https://x-access-token:${INSTALLATION_TOKEN}@${SERVER_HOST}/${GITHUB_REPOSITORY}.git"
+REMOTE_URL="https://x-access-token:${GITHUB_TOKEN}@${SERVER_HOST}/${GITHUB_REPOSITORY}.git"
 git remote set-url origin "${REMOTE_URL}"
 echo "✓ Git credentials configured"
 
