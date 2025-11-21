@@ -43,7 +43,19 @@ ERROR_FILE="/tmp/qoder-error-$(date +%s).log"
 ARGS=("-w" "${GITHUB_WORKSPACE}")
 
 if [[ -n "${INPUT_PROMPT:-}" ]]; then
-  ARGS+=("-p" "${INPUT_PROMPT}")
+  PROMPT_ARG="${INPUT_PROMPT}"
+  if command -v python3 >/dev/null 2>&1; then
+    PROMPT_ARG="$(
+      INPUT_PROMPT="${INPUT_PROMPT}" python3 - <<'PY'
+import json, os
+print(json.dumps(os.environ["INPUT_PROMPT"])[1:-1])
+PY
+    )"
+  else
+    PROMPT_ARG="${PROMPT_ARG//$'\n'/\\n}"
+    PROMPT_ARG="${PROMPT_ARG//\"/\\\"}"
+  fi
+  ARGS+=("-p" "${PROMPT_ARG}")
 fi
 
 if [[ -n "${INPUT_FLAGS:-}" ]]; then
