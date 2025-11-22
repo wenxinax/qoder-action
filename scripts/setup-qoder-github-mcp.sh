@@ -11,9 +11,6 @@ require_env() {
 }
 
 require_env GITHUB_TOKEN
-require_env GITHUB_REPOSITORY
-require_env GITHUB_RUN_ID
-require_env GITHUB_SERVER_URL
 require_env QODER_GITHUB_MCP_VERSION
 require_env GITHUB_PATH
 
@@ -69,17 +66,11 @@ fi
 # Use jq to merge configuration instead of overwriting
 if jq --arg cmd "${MCP_COMMAND}" \
    --arg token "${GITHUB_TOKEN}" \
-   --arg repo "${GITHUB_REPOSITORY}" \
-   --arg runid "${GITHUB_RUN_ID}" \
-   --arg server "${GITHUB_SERVER_URL}" \
    '.mcpServers.qoder_github = {
      "command": $cmd,
      "args": ["stdio"],
      "env": {
-       "GITHUB_TOKEN": $token,
-       "GITHUB_REPOSITORY": $repo,
-       "GITHUB_RUN_ID": $runid,
-       "GITHUB_SERVER_URL": $server
+       "GITHUB_TOKEN": $token
      },
      "type": "stdio"
    }' "${CONFIG_FILE}" > "${TMP_CONFIG}"; then

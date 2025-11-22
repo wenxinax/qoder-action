@@ -74,9 +74,6 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-        GITHUB_RUN_ID: ${{ github.run_id }}
-        GITHUB_SERVER_URL: ${{ github.server_url }}
         QODER_GITHUB_MCP_VERSION: ${{ inputs.qoder_github_mcp_version }}
       run: |
         bash "${GITHUB_ACTION_PATH}/scripts/setup-qoder-github-mcp.sh"
