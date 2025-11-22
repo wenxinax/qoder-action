@@ -1,5 +1,6 @@
 name: 'Qoder Action'
-description: 'Transparent launcher for qodercli in GitHub Actions'
+description: 'Integrate Qoder AI into your GitHub Actions workflow. Automate code reviews, refactoring, and development tasks with an intelligent agent.'
+author: 'Qoder AI'
 
 branding:
   icon: 'code'
@@ -9,7 +10,6 @@ inputs:
   prompt:
     description: 'Instructions for qodercli (passed to -p flag)'
     required: true
-    default: ''
   
   flags:
     description: |
@@ -17,33 +17,33 @@ inputs:
       Multiple lines are supported.
     required: false
     default: ''
-  
+
   qoder_personal_access_token:
-    description: 'Qoder personal access token for authentication'
+    description: 'Your Qoder Personal Access Token. Must be stored as a GitHub Secret (e.g., secrets.QODER_PERSONAL_ACCESS_TOKEN).'
     required: true
-  
+
   enable_qoder_github_mcp:
-    description: 'Enable qoder-github MCP Server for enhanced GitHub operations'
+    description: 'Enable the qoder-github MCP Server for enhanced GitHub operations and tool capabilities.'
     required: false
     default: 'true'
   
   qoder_github_mcp_version:
-    description: 'Version of qoder-github MCP server to install when enabled'
+    description: 'Version of the qoder-github MCP server to install. Defaults to the recommended version compatible with this action.'
     required: false
     default: '0.1.0-beta'
-  
+
   qodercli_version:
-    description: 'Version of qodercli to install'
+    description: 'Specific version of qodercli to install. Defaults to a known compatible version.'
     required: false
     default: '0.1.10'
 
 outputs:
   output_file:
-    description: 'Path to file containing qodercli stdout output'
+    description: 'Path to the file containing qodercli stdout output (formatted as stream-json).'
     value: ${{ steps.run_cli.outputs.output_file }}
   
   error:
-    description: 'Error message from qodercli (if failed)'
+    description: 'Error message from qodercli if the execution failed.'
     value: ${{ steps.run_cli.outputs.error }}
 
 runs:
@@ -91,4 +91,3 @@ runs:
         INPUT_FLAGS: ${{ inputs.flags }}
       run: |
         bash "${GITHUB_ACTION_PATH}/scripts/run-qodercli.sh"
-
