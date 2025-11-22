@@ -99,6 +99,7 @@ const rlOut = readline.createInterface({
 let lastThinking = '';
 const processedToolIds = new Set();
 let sessionIdPrinted = false;
+let capturedSessionId = null;
 
 rlOut.on('line', (line) => {
   outputStream.write(line + '\n');
@@ -108,9 +109,12 @@ rlOut.on('line', (line) => {
   try {
     const data = JSON.parse(line);
     
-    if (data.type === 'system' && data.subtype === 'init' && data.session_id && !sessionIdPrinted) {
-      process.stdout.write(`${COLORS.BOLD}Session ID:${COLORS.RESET} ${data.session_id}\n`);
-      sessionIdPrinted = true;
+    if (data.type === 'system' && data.subtype === 'init' && data.session_id) {
+      capturedSessionId = data.session_id;
+      if (!sessionIdPrinted) {
+        process.stdout.write(`${COLORS.BOLD}Session ID:${COLORS.RESET} ${data.session_id}\n`);
+        sessionIdPrinted = true;
+      }
     }
     
     // Stream Content
@@ -188,7 +192,27 @@ child.on('close', (code) => {
     }
     
     if (code !== 0) {
-        console.log(`::error::qodercli failed with exit code ${code}`);
+        let errorMessage = `qodercli failed with exit code ${code}`;
+        if (capturedSessionId) {
+            errorMessage += ` (Session ID: ${capturedSessionId})`;
+        }
+
+        // Try to read the last few lines of the error file to provide more context
+        try {
+            if (fs.existsSync(errorFile)) {
+                const errorContent = fs.readFileSync(errorFile, 'utf8').trim();
+                if (errorContent) {
+                    // Get the last 5 lines or 500 chars to avoid spamming
+                    const lines = errorContent.split('\n');
+                    const lastLines = lines.slice(-10).join('\n'); 
+                    errorMessage += `\n\nError Details:\n${lastLines}`;
+                }
+            }
+        } catch (e) {
+            // Ignore file read errors
+        }
+
+        console.log(`::error::${errorMessage.replace(/\n/g, '%0A')}`); // Escape newlines for GitHub Actions
     } else {
         console.log('✓ qodercli executed successfully');
     }
