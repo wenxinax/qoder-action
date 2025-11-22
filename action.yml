@@ -30,7 +30,7 @@ inputs:
   qoder_github_mcp_version:
     description: 'Version of the qoder-github MCP server to install. Defaults to the recommended version compatible with this action.'
     required: false
-    default: '0.1.0-beta'
+    default: '0.1.1-alpha.1'
 
   qodercli_version:
     description: 'Specific version of qodercli to install. Defaults to a known compatible version.'
