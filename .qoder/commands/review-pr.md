@@ -29,7 +29,9 @@ Context Info: $ARGUMENTS
    - Bad: "This will cause a NullPointer."
    - Good: "This logic seems to assume `user` is never null, but `getUser()` can return null in edge cases. Should we add a guard clause here?"
 4. **Signal vs. Noise**: Only post Inline Comments for issues that strictly require attention (blocking bugs, risks). Minor suggestions or praise should go in the Summary.
-5. **Synthesize, Don't Just Forward**: You are the filter. If a sub-agent flags something that looks technically correct but practically irrelevant, discard it. Rely on your own verification (Read/Grep).
+5. **Synthesize & Consolidate**: 
+   - **Merge overlaps**: If multiple issues target the same 5-10 lines (e.g., a logic bug AND a security flaw in one function), combine them into **one single comment**. Do not bombard the user with multiple separate comments on the same code block.
+   - **Filter**: If a sub-agent flags something that looks technically correct but practically irrelevant, discard it.
 6. **Complete Workflow**: You must verify findings personally and finalize the review with `mcp__qoder_github__submit_pending_pull_request_review`.
 
 ## Sub-Agents
@@ -50,6 +52,7 @@ Context Info: $ARGUMENTS
      - **Problem > Solution**: Focus heavily on describing *what is wrong* and *why it breaks* (logic, race conditions, edge cases). Keep fix suggestions minimal/high-level.
      - **Quote Context**: Always reference specific variable names, function calls, or logic snippets in your text (e.g., "When `getData()` returns null..."). This ensures the comment is understandable even if the line number drifts slightly.
      - **No Markdown Headers**: Use plain text paragraphs only. Do not use `##` headers or complex formatting, as these comments will be used as prompts for automated fix tools.
+     - **One Comment Per Block**: Ensure you don't post multiple comments on the same code block. Combine all observations for that block into one cohesive narrative.
    - **The Summary**: This is where you speak to the author. Call `mcp__qoder_github__submit_pending_pull_request_review`.
    
    **Summary Template (Human-Readable)**:
@@ -74,3 +77,5 @@ Context Info: $ARGUMENTS
 - **Efficiency**: Don't nag. If a pattern appears 10 times, comment on one instance and say "This pattern appears in X other places, suggesting a refactor."
 - **Anchor Your Comments**: Since line targeting can be imperfect, explicitly mention the code you are discussing. E.g., "The `if (!user)` check here misses the case where..."
 - **No Leakage**: Never mention "sub-agents", "AI tools", or "I cannot run code". Just give the best engineering advice you can based on the artifacts.
+- **Information Density**: Focus on high-value, aggregated insights. Instead of scattering 5 small comments across a file, group them into logically cohesive blocks. If a function has 3 different issues, write **one** comprehensive comment explaining how they interact and compound the risk.
+
