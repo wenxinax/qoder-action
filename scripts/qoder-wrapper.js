@@ -119,7 +119,8 @@ rlOut.on('line', (line) => {
         data.message.content.forEach(part => {
           // Text
           if (part.type === 'text' && part.text) {
-            printGroupStart(`${COLORS.CYAN}Assistant${COLORS.RESET}`);
+            const summary = part.text.substring(0, 60).replace(/\r?\n/g, ' ') + (part.text.length > 60 ? '...' : '');
+            printGroupStart(`${COLORS.CYAN}Assistant${COLORS.RESET} ${summary}`);
             process.stdout.write(part.text + '\n');
             printGroupEnd();
           }
