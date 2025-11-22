@@ -8,6 +8,7 @@ Turn your GitHub repository into an intelligent workspace with **Qoder**. This a
 
 - **🤖 Intelligent Code Reviews**: Automatically analyze Pull Requests for bugs, security vulnerabilities, and code style issues before they merge.
 - **💬 Interactive Development**: Collaborate with `@qoder` directly in Issues and Pull Requests to explain code, refactor logic, or generate tests via chat.
+- **🛠️ Specialized GitHub Tools**: Includes a custom-optimized `qoder-github-mcp-server` that provides specialized MCP tools for robust GitHub interactions.
 - **🧠 Context-Aware**: Inject project-specific knowledge (architecture, conventions) simply by adding an `Agents.md` file to your repository.
 - **🧩 Highly Extensible**: Define custom **Subagents** and **Slash Commands** to create tailored workflows that match your team's unique processes.
 - **⚡ Pipeline Ready**: Built for CI/CD with structured stream-json outputs, enabling seamless integration with other tools and scripts.
@@ -80,7 +81,7 @@ This action provides outputs that can be consumed by subsequent steps in your wo
 
 This action uses OpenID Connect (OIDC) to securely authenticate with Qoder services. Ensure your workflow has the `id-token: write` permission.
 
-## Advanced Customization
+## Customization
 
 Beyond standard configuration, you can deeply customize Qoder's behavior and knowledge base.
 
@@ -91,7 +92,7 @@ Simply add an `Agents.md` file to your repository. Qoder automatically detects a
 - Domain-specific terminology.
 - Guidelines you want Qoder to follow in every interaction.
 
-### Extensions (Subagents & Commands)
+### Extensions
 We encourage customizing Qoder's behavior using **Subagents** and **Slash Commands**. By defining these in your repository's `.qoder/` directory, you can create structured, persona-based workflows tailored to your project's specific needs.
 
 For detailed documentation on creating subagents and commands, please refer to the [Qoder CLI Documentation](https://docs.qoder.com/cli/using-cli#subagent).
@@ -99,3 +100,13 @@ For detailed documentation on creating subagents and commands, please refer to t
 ## Recipes & Best Practices
 
 Explore our [Recipes Guide](./docs/recipes.md) for a collection of ready-to-use configurations, including advanced filtering, cost optimization, and language customization.
+
+## Contributing
+
+Contributions are welcome! Whether you're fixing a bug, adding a new [workflow example](./examples/), or improving documentation, we'd love to see your PRs.
+
+Please feel free to open an [Issue](../../issues) if you encounter any problems or have feature requests.
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
