@@ -15,14 +15,15 @@ Turn your GitHub repository into an intelligent workspace with **Qoder**. This a
 
 ## Quick Start
 
-> **Tip**: If you have `qodercli` installed locally, you can run **`/setup-github`** in the TUI to automatically configure secrets and create workflow files for you.
+> **Tip**: If you have `qodercli` installed locally, you can run **`/setup-github`** in the TUI to guide you through the entire setup.
 
 Get started with Qoder in your repository in just a few minutes:
 
-### 1. Get a Qoder Personal Access Token
+### 1. Setup Integration & Get Token
 
 1. Go to [https://qoder.com/account/integrations](https://qoder.com/account/integrations).
-2. Generate a new **Personal Access Token**.
+2. Connect your Qoder account with GitHub and install the **qoderai** GitHub App to your target repository.
+3. Generate a new **Personal Access Token**.
 
 ### 2. Add it as a GitHub Secret
 
