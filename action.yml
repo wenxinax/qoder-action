@@ -1,0 +1,84 @@
+name: 'Qoder Action'
+description: 'Integrate Qoder AI into your GitHub Actions workflow. Automate code reviews, refactoring, and development tasks with an intelligent agent.'
+author: 'Qoder AI'
+
+branding:
+  icon: 'code'
+  color: 'green'
+
+inputs:
+  prompt:
+    description: 'Instructions for qodercli (passed to -p flag)'
+    required: true
+  
+  flags:
+    description: |
+      Additional CLI arguments to pass to qodercli.
+      Multiple lines are supported.
+    required: false
+    default: ''
+
+  qoder_personal_access_token:
+    description: 'Your Qoder Personal Access Token. Must be stored as a GitHub Secret (e.g., secrets.QODER_PERSONAL_ACCESS_TOKEN).'
+    required: true
+
+  qodercli_version:
+    description: 'Specific version of qodercli to install. The default version is tested and optimized for this action. Changing it is not recommended and may lead to unexpected behavior.'
+    required: false
+    default: '0.1.10'
+
+  enable_qoder_github_mcp:
+    description: 'Enable the qoder-github MCP Server for enhanced GitHub operations. This is required for built-in resources and advanced tool capabilities.'
+    required: false
+    default: 'true'
+
+outputs:
+  output_file:
+    description: 'Path to the file containing qodercli stdout output (formatted as stream-json).'
+    value: ${{ steps.run_cli.outputs.output_file }}
+  
+  error:
+    description: 'Error message from qodercli if the execution failed.'
+    value: ${{ steps.run_cli.outputs.error }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install qodercli
+      shell: bash
+      env:
+        QODERCLI_VERSION: ${{ inputs.qodercli_version }}
+      run: |
+        echo "::group::Installing qodercli"
+        echo "Installing qodercli version ${QODERCLI_VERSION} via npm..."
+        npm install -g @qoder-ai/qodercli@${QODERCLI_VERSION}
+        echo "::endgroup::"
+        echo "✓ qodercli installed successfully"
+        echo "Installed version: $(qodercli --version)"
+
+    - name: Configure Git Authentication
+      id: auth
+      shell: bash
+      env:
+        QODER_PERSONAL_ACCESS_TOKEN: ${{ inputs.qoder_personal_access_token }}
+      run: |
+        bash "${GITHUB_ACTION_PATH}/scripts/configure-qoder-auth.sh"
+
+    - name: Setup qoder-github MCP Server
+      if: inputs.enable_qoder_github_mcp == 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
+      run: |
+        bash "${GITHUB_ACTION_PATH}/scripts/setup-qoder-github-mcp.sh"
+
+    - name: Run qodercli
+      id: run_cli
+      shell: bash
+      env:
+        QODER_PERSONAL_ACCESS_TOKEN: ${{ inputs.qoder_personal_access_token }}
+        GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
+        INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_FLAGS: ${{ inputs.flags }}
+      run: |
+        bash "${GITHUB_ACTION_PATH}/scripts/run-qodercli.sh"
