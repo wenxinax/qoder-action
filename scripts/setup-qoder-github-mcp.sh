@@ -37,7 +37,7 @@ chmod +x "${TMP_INSTALLER}"
 echo "Running installer..."
 
 set +e
-"${TMP_INSTALLER}" --version "0.1.0-beta" --install-dir "${BIN_DIR}" > "${INSTALL_LOG}" 2>&1
+"${TMP_INSTALLER}" --version "0.1.0-beta.1" --install-dir "${BIN_DIR}" > "${INSTALL_LOG}" 2>&1
 EXIT_CODE=$?
 set -e
 
