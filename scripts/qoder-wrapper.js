@@ -207,7 +207,7 @@ child.stderr.on('data', (chunk) => {
 
 // --- 3. Cleanup & Output ---
 
-child.on('close', (code) => {
+child.on('close', (code, signal) => {
   outputStream.end();
   errorStream.end(() => {
     // After streams close, write to GITHUB_OUTPUT
@@ -228,10 +228,25 @@ child.on('close', (code) => {
         }
     }
     
-    if (code !== 0 || hasExecutionError) {
-        let errorMessage = code !== 0 
-            ? `qodercli failed with exit code ${code}` 
-            : `qodercli failed with application error`;
+    // Determine the effective exit code
+    // If code is null (process terminated by signal), treat as error (1)
+    const effectiveCode = code !== null ? code : 1;
+    const isError = effectiveCode !== 0 || hasExecutionError;
+
+    if (isError) {
+        let errorMessage = `qodercli failed`;
+        
+        if (code !== null) {
+            errorMessage += ` with exit code ${code}`;
+        } else if (signal) {
+            errorMessage += ` with signal ${signal}`;
+        } else {
+             errorMessage += ` (unknown termination)`;
+        }
+
+        if (hasExecutionError && code === 0) {
+             errorMessage = `qodercli failed with application error`;
+        }
 
         if (capturedSessionId) {
             errorMessage += ` (Session ID: ${capturedSessionId})`;
@@ -242,7 +257,7 @@ child.on('close', (code) => {
             if (fs.existsSync(errorFile)) {
                 const errorContent = fs.readFileSync(errorFile, 'utf8').trim();
                 if (errorContent) {
-                    // Get the last 5 lines or 500 chars to avoid spamming
+                    // Get the last 10 lines
                     const lines = errorContent.split('\n');
                     const lastLines = lines.slice(-10).join('\n'); 
                     errorMessage += `\n\nError Details:\n${lastLines}`;
@@ -257,7 +272,8 @@ child.on('close', (code) => {
         console.log('✓ qodercli executed successfully');
     }
 
-    process.exit(code !== 0 ? code : (hasExecutionError ? 1 : 0));
+    // Ensure we exit with a non-zero code if there was an error
+    process.exit(isError ? (effectiveCode === 0 ? 1 : effectiveCode) : 0);
   });
 });
 
