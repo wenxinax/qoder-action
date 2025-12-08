@@ -20,6 +20,17 @@ function printGroupEnd() {
   process.stdout.write(`::endgroup::\n`);
 }
 
+function printError(message) {
+  console.log(`::error::${message.replace(/\n/g, '%0A')}`);
+}
+
+// Global error handler
+process.on('uncaughtException', (err) => {
+  const msg = err instanceof Error ? err.message : String(err);
+  printError(msg);
+  process.exit(1);
+});
+
 function maskSensitiveData(obj) {
   if (!obj || typeof obj !== 'object') return obj;
   
@@ -140,11 +151,18 @@ rlOut.on('line', (line) => {
 
     if (data.done && data.type === 'error') {
       hasExecutionError = true;
-      const msg = `Workflow failed. Please report this issue to https://github.com/qoder-dev/qoder-action/issues with Session ID: ${capturedSessionId}`;
-      console.log(`::error::${msg}`);
-      if (data.error) {
-         console.log(`Error details: ${typeof data.error === 'object' ? JSON.stringify(data.error) : data.error}`);
+      
+      const errorDetail = data.error 
+          ? (typeof data.error === 'object' ? JSON.stringify(data.error) : data.error)
+          : 'Unknown error';
+
+      let msg = errorDetail;
+      if (capturedSessionId) {
+        msg += ` (Session ID: ${capturedSessionId})`;
       }
+      msg += `\nPlease report this issue to https://github.com/qoder-dev/qoder-action/issues`;
+      
+      printError(msg);
     }
     
     // Stream Content
@@ -224,7 +242,7 @@ child.on('close', (code, signal) => {
                 fs.appendFileSync(githubOutput, `error=\n`);
             }
         } catch (err) {
-            console.error('Failed to write to GITHUB_OUTPUT:', err);
+            printError(`Failed to write to GITHUB_OUTPUT: ${err.message || err}`);
         }
     }
     
@@ -233,42 +251,26 @@ child.on('close', (code, signal) => {
     const effectiveCode = code !== null ? code : 1;
     const isError = effectiveCode !== 0 || hasExecutionError;
 
-    if (isError) {
-        let errorMessage = `qodercli failed`;
-        
-        if (code !== null) {
-            errorMessage += ` with exit code ${code}`;
-        } else if (signal) {
-            errorMessage += ` with signal ${signal}`;
-        } else {
-             errorMessage += ` (unknown termination)`;
-        }
-
-        if (hasExecutionError && code === 0) {
-             errorMessage = `qodercli failed with application error`;
-        }
-
-        if (capturedSessionId) {
-            errorMessage += ` (Session ID: ${capturedSessionId})`;
-        }
-
-        // Try to read the last few lines of the error file to provide more context
+    // Check system-level errors (stderr) only if process failed
+    if (effectiveCode !== 0) {
+        let errorDetails = '';
         try {
             if (fs.existsSync(errorFile)) {
-                const errorContent = fs.readFileSync(errorFile, 'utf8').trim();
-                if (errorContent) {
-                    // Get the last 10 lines
-                    const lines = errorContent.split('\n');
-                    const lastLines = lines.slice(-10).join('\n'); 
-                    errorMessage += `\n\nError Details:\n${lastLines}`;
-                }
+                errorDetails = fs.readFileSync(errorFile, 'utf8').trim().split('\n').slice(-10).join('\n');
             }
-        } catch (e) {
-            // Ignore file read errors
-        }
+        } catch (e) { /* ignore */ }
 
-        console.log(`::error::${errorMessage.replace(/\n/g, '%0A')}`); // Escape newlines for GitHub Actions
-    } else {
+        if (errorDetails) {
+             let msg = errorDetails;
+             if (capturedSessionId) msg += ` (Session ID: ${capturedSessionId})`;
+             printError(msg);
+        } else {
+             // Fallback if no stderr but exit code != 0
+             let msg = `qodercli failed with ${code !== null ? `exit code ${code}` : `signal ${signal}`}`;
+             if (capturedSessionId) msg += ` (Session ID: ${capturedSessionId})`;
+             printError(msg);
+        }
+    } else if (!hasExecutionError) {
         console.log('✓ qodercli executed successfully');
     }
 
@@ -278,6 +280,6 @@ child.on('close', (code, signal) => {
 });
 
 child.on('error', (err) => {
-  console.error(`Failed to start qodercli: ${err}`);
+  printError(err.message || err);
   process.exit(1);
 });
