@@ -120,6 +120,7 @@ let lastThinking = '';
 const processedToolIds = new Set();
 let sessionIdPrinted = false;
 let capturedSessionId = null;
+let hasExecutionError = false;
 
 rlOut.on('line', (line) => {
   outputStream.write(line + '\n');
@@ -136,9 +137,18 @@ rlOut.on('line', (line) => {
         sessionIdPrinted = true;
       }
     }
+
+    if (data.done && data.type === 'error') {
+      hasExecutionError = true;
+      const msg = `Workflow failed. Please report this issue to https://github.com/qoder-dev/qoder-action/issues with Session ID: ${capturedSessionId}`;
+      console.log(`::error::${msg}`);
+      if (data.error) {
+         console.log(`Error details: ${typeof data.error === 'object' ? JSON.stringify(data.error) : data.error}`);
+      }
+    }
     
     // Stream Content
-    if (data.type === 'assistant' && data.subtype === 'stream') {
+    if (data.type === 'assistant' && data.subtype === 'message') {
       if (data.message && Array.isArray(data.message.content)) {
         data.message.content.forEach(part => {
           // Text
@@ -218,8 +228,11 @@ child.on('close', (code) => {
         }
     }
     
-    if (code !== 0) {
-        let errorMessage = `qodercli failed with exit code ${code}`;
+    if (code !== 0 || hasExecutionError) {
+        let errorMessage = code !== 0 
+            ? `qodercli failed with exit code ${code}` 
+            : `qodercli failed with application error`;
+
         if (capturedSessionId) {
             errorMessage += ` (Session ID: ${capturedSessionId})`;
         }
@@ -244,7 +257,7 @@ child.on('close', (code) => {
         console.log('✓ qodercli executed successfully');
     }
 
-    process.exit(code);
+    process.exit(code !== 0 ? code : (hasExecutionError ? 1 : 0));
   });
 });
 
