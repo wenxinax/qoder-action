@@ -131,7 +131,7 @@ let lastThinking = '';
 const processedToolIds = new Set();
 let sessionIdPrinted = false;
 let capturedSessionId = null;
-let hasExecutionError = false;
+let lastEventData = null;
 
 rlOut.on('line', (line) => {
   outputStream.write(line + '\n');
@@ -140,6 +140,7 @@ rlOut.on('line', (line) => {
 
   try {
     const data = JSON.parse(line);
+    lastEventData = data;
     
     if (data.type === 'system' && data.subtype === 'init' && data.session_id) {
       capturedSessionId = data.session_id;
@@ -147,22 +148,6 @@ rlOut.on('line', (line) => {
         process.stdout.write(`${COLORS.BOLD}Session ID:${COLORS.RESET} ${data.session_id}\n`);
         sessionIdPrinted = true;
       }
-    }
-
-    if (data.done && data.type === 'error') {
-      hasExecutionError = true;
-      
-      const errorDetail = data.error 
-          ? (typeof data.error === 'object' ? JSON.stringify(data.error) : data.error)
-          : 'Unknown error';
-
-      let msg = errorDetail;
-      if (capturedSessionId) {
-        msg += ` (Session ID: ${capturedSessionId})`;
-      }
-      msg += `\nPlease report this issue to https://github.com/qoder-dev/qoder-action/issues`;
-      
-      printError(msg);
     }
     
     // Stream Content
@@ -249,9 +234,8 @@ child.on('close', (code, signal) => {
     // Determine the effective exit code
     // If code is null (process terminated by signal), treat as error (1)
     const effectiveCode = code !== null ? code : 1;
-    const isError = effectiveCode !== 0 || hasExecutionError;
 
-    // Check system-level errors (stderr) only if process failed
+    // 1. System-level failure (Process crashed or exited with error code)
     if (effectiveCode !== 0) {
         let errorDetails = '';
         try {
@@ -270,12 +254,26 @@ child.on('close', (code, signal) => {
              if (capturedSessionId) msg += ` (Session ID: ${capturedSessionId})`;
              printError(msg);
         }
-    } else if (!hasExecutionError) {
-        console.log('✓ qodercli executed successfully');
-    }
+        process.exit(effectiveCode);
+    } else if (lastEventData && lastEventData.done && lastEventData.type === 'error') {
+        // 2. Business-logic failure (Process exited with 0, but last event was error)
+        const errorDetail = lastEventData.error 
+          ? (typeof lastEventData.error === 'object' ? JSON.stringify(lastEventData.error) : lastEventData.error)
+          : 'Unknown error';
 
-    // Ensure we exit with a non-zero code if there was an error
-    process.exit(isError ? (effectiveCode === 0 ? 1 : effectiveCode) : 0);
+        let msg = errorDetail;
+        if (capturedSessionId) {
+            msg += ` (Session ID: ${capturedSessionId})`;
+        }
+        msg += `\nPlease report this issue to https://github.com/qoder-dev/qoder-action/issues`;
+        
+        printError(msg);
+        process.exit(1);
+    } else {
+        // 3. Success
+        console.log('✓ qodercli executed successfully');
+        process.exit(0);
+    }
   });
 });
 
