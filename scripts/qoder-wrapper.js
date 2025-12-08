@@ -107,6 +107,7 @@ args.push('-f', 'stream-json');
 
 // Print Arguments Group
 printGroupStart('Arguments for qodercli');
+console.log(`Debug: Spawning qodercli with GOTRACEBACK=${process.env.GOTRACEBACK || 'system (defaulted)'}`);
 for (let i = 0; i < args.length; i++) {
   console.log(`  ${args[i]}`);
 }
@@ -118,7 +119,10 @@ printGroupEnd();
 const child = spawn('qodercli', args, {
   stdio: ['inherit', 'pipe', 'pipe'], // Capture stdout and stderr
   shell: false,
-  env: process.env
+  env: {
+    ...process.env,
+    GOTRACEBACK: process.env.GOTRACEBACK || 'system' // Ensure GOTRACEBACK is set
+  }
 });
 
 // Handle stdout (Main output stream)
