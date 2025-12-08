@@ -116,13 +116,25 @@ printGroupEnd();
 
 // --- 2. Execution & Stream Processing ---
 
-const child = spawn('qodercli', args, {
+// FORCE GDB DEBUGGING
+const spawnCmd = 'gdb';
+const spawnArgs = [
+  '-q',
+  '-batch',
+  '-ex', 'handle SIGSEGV stop print pass',
+  '-ex', 'run',
+  '-ex', 'bt full',
+  '--args',
+  'qodercli',
+  ...args
+];
+
+console.log(`Debug: Spawning GDB wrapper for qodercli...`);
+
+const child = spawn(spawnCmd, spawnArgs, {
   stdio: ['inherit', 'pipe', 'pipe'], // Capture stdout and stderr
   shell: false,
-  env: {
-    ...process.env,
-    GOTRACEBACK: process.env.GOTRACEBACK || 'system' // Ensure GOTRACEBACK is set
-  }
+  env: process.env
 });
 
 // Handle stdout (Main output stream)

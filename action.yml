@@ -72,6 +72,15 @@ runs:
       run: |
         bash "${GITHUB_ACTION_PATH}/scripts/setup-qoder-github-mcp.sh"
 
+    - name: Setup Debug Tools
+      shell: bash
+      run: |
+        if ! command -v gdb &> /dev/null; then
+            echo "Installing GDB..."
+            sudo apt-get update && sudo apt-get install -y gdb
+        fi
+        gdb --version
+
     - name: Run qodercli
       id: run_cli
       shell: bash
@@ -80,5 +89,6 @@ runs:
         GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_FLAGS: ${{ inputs.flags }}
+        GOTRACEBACK: "system" 
       run: |
         bash "${GITHUB_ACTION_PATH}/scripts/run-qodercli.sh"
